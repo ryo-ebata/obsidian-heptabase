@@ -79,10 +79,7 @@ export class EdgeSync {
 		await this.backlinkWriter.addConnection(sourceFile, toBasename, "->");
 	}
 
-	async processRemovedEdge(
-		edge: CanvasEdgeData,
-		currentEdges: CanvasEdgeData[],
-	): Promise<void> {
+	async processRemovedEdge(edge: CanvasEdgeData, currentEdges: CanvasEdgeData[]): Promise<void> {
 		const fromNode = this.nodeSnapshot.get(edge.fromNode);
 		const toNode = this.nodeSnapshot.get(edge.toNode);
 
@@ -104,12 +101,14 @@ export class EdgeSync {
 		const targetFile = this.app.vault.getAbstractFileByPath(toNode.file);
 
 		if (sourceFile instanceof TFile) {
-			const toBasename = targetFile instanceof TFile ? targetFile.basename : toNode.file.replace(/\.md$/, "");
+			const toBasename =
+				targetFile instanceof TFile ? targetFile.basename : toNode.file.replace(/\.md$/, "");
 			await this.backlinkWriter.removeConnection(sourceFile, toBasename, "->");
 		}
 
 		if (targetFile instanceof TFile) {
-			const fromBasename = sourceFile instanceof TFile ? sourceFile.basename : fromNode.file.replace(/\.md$/, "");
+			const fromBasename =
+				sourceFile instanceof TFile ? sourceFile.basename : fromNode.file.replace(/\.md$/, "");
 			await this.backlinkWriter.removeConnection(targetFile, fromBasename, "<-");
 		}
 	}

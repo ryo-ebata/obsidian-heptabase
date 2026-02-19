@@ -15,8 +15,20 @@ export function SidebarContainer(): React.ReactElement {
 	return (
 		<div className="h-full flex flex-col">
 			<SidebarTabs activeTab={activeTab} onTabChange={handleTabChange} />
-			{activeTab === "card-library" && <HeadingExplorer />}
-			{activeTab === "article-viewer" && <ArticleViewerPanel />}
+			<div
+				data-tab-panel="card-library"
+				className="flex-1 overflow-hidden"
+				style={{ display: activeTab === "card-library" ? undefined : "none" }}
+			>
+				<HeadingExplorer />
+			</div>
+			<div
+				data-tab-panel="article-viewer"
+				className="flex-1 overflow-hidden"
+				style={{ display: activeTab === "article-viewer" ? undefined : "none" }}
+			>
+				<ArticleViewerPanel />
+			</div>
 		</div>
 	);
 }

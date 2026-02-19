@@ -31,6 +31,7 @@ export function useEmbeddableEditor({
 	onSaveRef.current = onSave;
 	const contentRef = useRef(content);
 	contentRef.current = content;
+	const debounceTimerRef = useRef<number>(0);
 
 	const getContainer = useCallback(() => {
 		return _containerOverride ?? containerRef.current;
@@ -47,6 +48,12 @@ export function useEmbeddableEditor({
 			onBlur: (editor: EmbeddableEditorHandle) => {
 				onSaveRef.current(editor.value);
 			},
+			onChange: (editor: EmbeddableEditorHandle) => {
+				clearTimeout(debounceTimerRef.current);
+				debounceTimerRef.current = window.setTimeout(() => {
+					onSaveRef.current(editor.value);
+				}, 300);
+			},
 		};
 
 		const editor = createEmbeddableEditor(app, container, options);
@@ -54,6 +61,7 @@ export function useEmbeddableEditor({
 		setEditorView(editor.cm);
 
 		return () => {
+			clearTimeout(debounceTimerRef.current);
 			editor.destroy();
 			editorRef.current = null;
 			setEditorView(null);

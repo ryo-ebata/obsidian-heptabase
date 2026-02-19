@@ -62,7 +62,13 @@ describe("HeadingItem", () => {
 
 	it("shows checkbox when isSelectable is true", () => {
 		const { container } = render(
-			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={false} onToggleSelect={vi.fn()} />,
+			<HeadingItem
+				heading={heading}
+				filePath="test.md"
+				isSelectable={true}
+				isSelected={false}
+				onToggleSelect={vi.fn()}
+			/>,
 		);
 		const checkbox = container.querySelector("input[type='checkbox']");
 		expect(checkbox).not.toBeNull();
@@ -71,7 +77,13 @@ describe("HeadingItem", () => {
 	it("calls onToggleSelect with HeadingDragData on checkbox change", () => {
 		const onToggleSelect = vi.fn();
 		const { container } = render(
-			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={false} onToggleSelect={onToggleSelect} />,
+			<HeadingItem
+				heading={heading}
+				filePath="test.md"
+				isSelectable={true}
+				isSelected={false}
+				onToggleSelect={onToggleSelect}
+			/>,
 		);
 		const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
 		fireEvent.click(checkbox);
@@ -94,7 +106,13 @@ describe("HeadingItem", () => {
 
 	it("applies bg-ob-hover class when isSelected is true", () => {
 		const { container } = render(
-			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={true} onToggleSelect={vi.fn()} />,
+			<HeadingItem
+				heading={heading}
+				filePath="test.md"
+				isSelectable={true}
+				isSelected={true}
+				onToggleSelect={vi.fn()}
+			/>,
 		);
 		const item = container.querySelector(".cursor-grab");
 		expect(item?.classList.contains("bg-ob-hover")).toBe(true);

@@ -53,9 +53,7 @@ describe("SettingTab", () => {
 		it("creates h2 headers via createEl", () => {
 			tab.display();
 			const createElMock = vi.mocked(tab.containerEl.createEl);
-			const h2Calls = createElMock.mock.calls.filter(
-				(call) => call[0] === "h2",
-			);
+			const h2Calls = createElMock.mock.calls.filter((call) => call[0] === "h2");
 			expect(h2Calls.length).toBeGreaterThanOrEqual(1);
 			expect(h2Calls[0]).toEqual(["h2", { text: "Heptabase Settings" }]);
 		});

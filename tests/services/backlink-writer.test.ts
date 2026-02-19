@@ -60,7 +60,10 @@ describe("BacklinkWriter", () => {
 			const sourceFile = new TFile("notes/source.md");
 			await writer.replaceSection(sourceFile, 0, 2, "Parent");
 
-			expect(app.vault.modify).toHaveBeenCalledWith(sourceFile, "## Parent\n\n[[Parent]]\n\n## Next");
+			expect(app.vault.modify).toHaveBeenCalledWith(
+				sourceFile,
+				"## Parent\n\n[[Parent]]\n\n## Next",
+			);
 		});
 
 		it("handles Japanese heading text", async () => {
@@ -158,13 +161,13 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.addConnection(file, "NoteB", "->");
 
@@ -177,13 +180,13 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/target.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.addConnection(file, "NoteA", "<-");
 
@@ -195,15 +198,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteA]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.addConnection(file, "NoteB", "->");
 
@@ -214,15 +217,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteB]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.addConnection(file, "NoteB", "->");
 
@@ -233,15 +236,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteB]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.addConnection(file, "NoteB", "<-");
 
@@ -255,15 +258,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteA]]", "[[NoteB]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.removeConnection(file, "NoteA", "->");
 
@@ -274,15 +277,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteA]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.removeConnection(file, "NoteA", "->");
 
@@ -293,15 +296,15 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteA]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.removeConnection(file, "NonExistent", "->");
 
@@ -312,13 +315,13 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.removeConnection(file, "NoteA", "->");
 
@@ -329,16 +332,16 @@ describe("BacklinkWriter", () => {
 			const file = new TFile("notes/source.md");
 			const captured: Record<string, unknown>[] = [];
 
-			app.fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			app.fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (_file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {
 						"connections-to": ["[[NoteA]]"],
 						"connections-from": ["[[NoteA]]"],
 					};
 					fn(fm);
 					captured.push(fm);
-				},
-			);
+				});
 
 			await writer.removeConnection(file, "NoteA", "->");
 

@@ -154,13 +154,13 @@ describe("EdgeSync", () => {
 			});
 
 			const captured: Array<{ file: TFile; fm: Record<string, unknown> }> = [];
-			fileManager.processFrontMatter = vi.fn().mockImplementation(
-				async (file: TFile, fn: (fm: Record<string, unknown>) => void) => {
+			fileManager.processFrontMatter = vi
+				.fn()
+				.mockImplementation(async (file: TFile, fn: (fm: Record<string, unknown>) => void) => {
 					const fm: Record<string, unknown> = {};
 					fn(fm);
 					captured.push({ file, fm });
-				},
-			);
+				});
 
 			await edgeSync.processNewEdge(edge, { nodes, edges: [edge] });
 

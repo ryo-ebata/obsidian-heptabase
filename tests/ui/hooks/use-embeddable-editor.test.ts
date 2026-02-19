@@ -1,4 +1,4 @@
-import type { EmbeddableEditorHandle } from "@/services/embeddable-editor";
+import type { EmbeddableEditorHandle, EmbeddableEditorOptions } from "@/services/embeddable-editor";
 import { useEmbeddableEditor } from "@/ui/hooks/use-embeddable-editor";
 import { renderHook } from "@testing-library/react";
 import { App } from "obsidian";
@@ -148,5 +148,131 @@ describe("useEmbeddableEditor", () => {
 		);
 
 		expect(result.current.editorView).toBeNull();
+	});
+
+	describe("onChange auto-save", () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it("passes onChange callback to createEmbeddableEditor", () => {
+			const container = document.createElement("div");
+
+			renderHook(
+				() =>
+					useEmbeddableEditor({
+						content: "# Hello",
+						onSave: vi.fn(),
+						_containerOverride: container,
+					}),
+				{ wrapper: createWrapper(app) },
+			);
+
+			const options = (createEmbeddableEditor as Mock).mock.calls[0][2] as EmbeddableEditorOptions;
+			expect(options.onChange).toBeDefined();
+			expect(typeof options.onChange).toBe("function");
+		});
+
+		it("calls onSave after debounce delay when onChange fires", () => {
+			const container = document.createElement("div");
+			const onSave = vi.fn();
+			let capturedOnChange: ((editor: EmbeddableEditorHandle) => void) | undefined;
+
+			(createEmbeddableEditor as Mock).mockImplementation(
+				(_app: App, _container: HTMLElement, options: EmbeddableEditorOptions) => {
+					capturedOnChange = options.onChange;
+					return mockEditor;
+				},
+			);
+
+			renderHook(
+				() =>
+					useEmbeddableEditor({
+						content: "# Hello",
+						onSave,
+						_containerOverride: container,
+					}),
+				{ wrapper: createWrapper(app) },
+			);
+
+			const editorWithValue = { ...mockEditor, value: "# Changed" };
+			capturedOnChange!(editorWithValue);
+
+			expect(onSave).not.toHaveBeenCalled();
+
+			vi.advanceTimersByTime(300);
+
+			expect(onSave).toHaveBeenCalledWith("# Changed");
+		});
+
+		it("resets debounce timer when onChange fires again before delay", () => {
+			const container = document.createElement("div");
+			const onSave = vi.fn();
+			let capturedOnChange: ((editor: EmbeddableEditorHandle) => void) | undefined;
+
+			(createEmbeddableEditor as Mock).mockImplementation(
+				(_app: App, _container: HTMLElement, options: EmbeddableEditorOptions) => {
+					capturedOnChange = options.onChange;
+					return mockEditor;
+				},
+			);
+
+			renderHook(
+				() =>
+					useEmbeddableEditor({
+						content: "# Hello",
+						onSave,
+						_containerOverride: container,
+					}),
+				{ wrapper: createWrapper(app) },
+			);
+
+			capturedOnChange!({ ...mockEditor, value: "# First" });
+			vi.advanceTimersByTime(200);
+
+			capturedOnChange!({ ...mockEditor, value: "# Second" });
+			vi.advanceTimersByTime(200);
+
+			expect(onSave).not.toHaveBeenCalled();
+
+			vi.advanceTimersByTime(100);
+
+			expect(onSave).toHaveBeenCalledTimes(1);
+			expect(onSave).toHaveBeenCalledWith("# Second");
+		});
+
+		it("clears debounce timer on unmount", () => {
+			const container = document.createElement("div");
+			const onSave = vi.fn();
+			let capturedOnChange: ((editor: EmbeddableEditorHandle) => void) | undefined;
+
+			(createEmbeddableEditor as Mock).mockImplementation(
+				(_app: App, _container: HTMLElement, options: EmbeddableEditorOptions) => {
+					capturedOnChange = options.onChange;
+					return mockEditor;
+				},
+			);
+
+			const { unmount } = renderHook(
+				() =>
+					useEmbeddableEditor({
+						content: "# Hello",
+						onSave,
+						_containerOverride: container,
+					}),
+				{ wrapper: createWrapper(app) },
+			);
+
+			capturedOnChange!({ ...mockEditor, value: "# Pending" });
+
+			unmount();
+			vi.advanceTimersByTime(300);
+
+			expect(onSave).not.toHaveBeenCalled();
+		});
 	});
 });

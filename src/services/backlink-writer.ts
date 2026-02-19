@@ -68,18 +68,12 @@ export class BacklinkWriter {
 		await this.app.vault.modify(sourceFile, newContent);
 	}
 
-	async addConnection(
-		file: TFile,
-		target: string,
-		direction: "->" | "<-",
-	): Promise<void> {
+	async addConnection(file: TFile, target: string, direction: "->" | "<-"): Promise<void> {
 		const key = FRONTMATTER_KEY[direction];
 		const link = `[[${target}]]`;
 
 		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-			const connections: string[] = Array.isArray(frontmatter[key])
-				? frontmatter[key]
-				: [];
+			const connections: string[] = Array.isArray(frontmatter[key]) ? frontmatter[key] : [];
 
 			if (connections.includes(link)) {
 				return;
@@ -90,11 +84,7 @@ export class BacklinkWriter {
 		});
 	}
 
-	async removeConnection(
-		file: TFile,
-		target: string,
-		direction: "->" | "<-",
-	): Promise<void> {
+	async removeConnection(file: TFile, target: string, direction: "->" | "<-"): Promise<void> {
 		const key = FRONTMATTER_KEY[direction];
 		const link = `[[${target}]]`;
 
