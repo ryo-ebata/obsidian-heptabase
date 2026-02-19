@@ -129,6 +129,61 @@ describe("CanvasOperator", () => {
 		});
 	});
 
+	describe("addNodeToCanvas - with subpath (reference mode)", () => {
+		it("uses JSON manipulation instead of createFileNode when subpath is provided", () => {
+			const canvas = createMockCanvas();
+			const file = new TFile("notes/test.md");
+
+			operator.addNodeToCanvas(canvas, file, { x: 100, y: 200 }, "#Section A");
+
+			expect(canvas.createFileNode).not.toHaveBeenCalled();
+			expect(canvas.getData).toHaveBeenCalled();
+			expect(canvas.setData).toHaveBeenCalled();
+			expect(canvas.requestSave).toHaveBeenCalled();
+		});
+
+		it("includes subpath in node data", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+			const file = new TFile("notes/test.md");
+
+			operator.addNodeToCanvas(canvas, file, { x: 100, y: 200 }, "#Section A");
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(setDataCall.nodes).toHaveLength(1);
+
+			const node = setDataCall.nodes[0];
+			expect(node.type).toBe("file");
+			expect(node.file).toBe("notes/test.md");
+			expect(node.subpath).toBe("#Section A");
+			expect(node.x).toBe(100);
+			expect(node.y).toBe(200);
+		});
+
+		it("returns a CanvasNode-compatible object", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+			const file = new TFile("notes/test.md");
+
+			const result = operator.addNodeToCanvas(canvas, file, { x: 100, y: 200 }, "#Section A");
+
+			expect(result).not.toBeNull();
+			expect(result?.x).toBe(100);
+			expect(result?.y).toBe(200);
+			expect(result?.id).toMatch(/^[0-9a-f]{16}$/);
+		});
+
+		it("does not use createFileNode even when it is available", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+			const file = new TFile("notes/test.md");
+
+			operator.addNodeToCanvas(canvas, file, { x: 0, y: 0 }, "#Heading");
+
+			expect(canvas.createFileNode).not.toHaveBeenCalled();
+		});
+	});
+
 	describe("addNodeViaJson", () => {
 		it("reads JSON, parses, adds node, and writes back", async () => {
 			const canvasFile = new TFile("canvas/test.canvas");
@@ -192,6 +247,38 @@ describe("CanvasOperator", () => {
 			expect(savedData.nodes[0].id).toBe("abc123");
 			expect(savedData.nodes[1].file).toBe("notes/additional.md");
 			expect(savedData.edges).toHaveLength(1);
+		});
+
+		it("includes subpath in node data when provided", async () => {
+			const canvasFile = new TFile("canvas/test.canvas");
+			const file = new TFile("notes/via-json.md");
+			const emptyData: CanvasData = { nodes: [], edges: [] };
+			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify(emptyData));
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addNodeViaJson(canvasFile, file, { x: 150, y: 250 }, "#Section B");
+
+			const modifyCall = vi.mocked(app.vault.modify).mock.calls[0];
+			const savedData: CanvasData = JSON.parse(modifyCall[1] as string);
+			expect(savedData.nodes).toHaveLength(1);
+
+			const node = savedData.nodes[0];
+			expect(node.subpath).toBe("#Section B");
+			expect(node.file).toBe("notes/via-json.md");
+		});
+
+		it("does not include subpath when not provided", async () => {
+			const canvasFile = new TFile("canvas/test.canvas");
+			const file = new TFile("notes/no-subpath.md");
+			const emptyData: CanvasData = { nodes: [], edges: [] };
+			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify(emptyData));
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addNodeViaJson(canvasFile, file, { x: 0, y: 0 });
+
+			const modifyCall = vi.mocked(app.vault.modify).mock.calls[0];
+			const savedData: CanvasData = JSON.parse(modifyCall[1] as string);
+			expect(savedData.nodes[0].subpath).toBeUndefined();
 		});
 
 		it("writes JSON back with tab indentation", async () => {

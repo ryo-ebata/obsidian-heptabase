@@ -9,7 +9,7 @@ interface SidebarTabsProps {
 
 const TABS: { id: SidebarTab; label: string }[] = [
 	{ id: "card-library", label: "Card Library" },
-	{ id: "toc", label: "ToC" },
+	{ id: "article-viewer", label: "Article" },
 	{ id: "canvas-info", label: "Info" },
 ];
 

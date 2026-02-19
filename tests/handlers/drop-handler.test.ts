@@ -49,7 +49,7 @@ describe("DropHandler", () => {
 	beforeEach(() => {
 		noticeSpy = vi.spyOn(obsidian, "Notice");
 		app = new App();
-		settings = { ...DEFAULT_SETTINGS };
+		settings = { ...DEFAULT_SETTINGS, dropMode: "extract" as const };
 		canvasObserver = {
 			getActiveCanvasView: vi.fn().mockReturnValue(null),
 			getSelectedNodes: vi.fn().mockReturnValue([]),
@@ -65,6 +65,7 @@ describe("DropHandler", () => {
 		} as unknown as FileCreator;
 		backlinkWriter = {
 			replaceSection: vi.fn().mockResolvedValue(undefined),
+			appendLink: vi.fn().mockResolvedValue(undefined),
 		} as unknown as BacklinkWriter;
 
 		handler = new DropHandler(
@@ -193,7 +194,7 @@ describe("DropHandler", () => {
 			});
 		});
 
-		it("writes backlink when leaveBacklink is enabled", async () => {
+		it("calls appendLink when leaveBacklink is enabled", async () => {
 			settings.leaveBacklink = true;
 			handler = new DropHandler(
 				app,
@@ -216,7 +217,8 @@ describe("DropHandler", () => {
 			const evt = createMockDragEvent(JSON.stringify(headingDragData));
 			await handler.handleCanvasDrop(evt);
 
-			expect(backlinkWriter.replaceSection).toHaveBeenCalledWith(sourceFile, 5, 2, "Section-A");
+			expect(backlinkWriter.appendLink).toHaveBeenCalledWith(sourceFile, 5, 2, "Section-A");
+			expect(backlinkWriter.replaceSection).not.toHaveBeenCalled();
 		});
 
 		it("does not write backlink when leaveBacklink is disabled", async () => {
@@ -232,6 +234,7 @@ describe("DropHandler", () => {
 			const evt = createMockDragEvent(JSON.stringify(headingDragData));
 			await handler.handleCanvasDrop(evt);
 
+			expect(backlinkWriter.appendLink).not.toHaveBeenCalled();
 			expect(backlinkWriter.replaceSection).not.toHaveBeenCalled();
 		});
 
@@ -294,7 +297,7 @@ describe("DropHandler", () => {
 			const evt = createMockDragEvent(JSON.stringify(headingDragData));
 			await handler.handleCanvasDrop(evt);
 
-			expect((previewBridge.requestPreview as Mock)).toHaveBeenCalledWith(
+			expect(previewBridge.requestPreview as Mock).toHaveBeenCalledWith(
 				[headingDragData],
 				["extracted content"],
 				expect.any(Function),
@@ -578,7 +581,7 @@ describe("DropHandler", () => {
 			const evt = createMockDragEvent(JSON.stringify(multiDragData));
 			await handler.handleCanvasDrop(evt);
 
-			expect((previewBridge.requestPreview as Mock)).toHaveBeenCalledWith(
+			expect(previewBridge.requestPreview as Mock).toHaveBeenCalledWith(
 				multiDragData.items,
 				["extracted", "extracted"],
 				expect.any(Function),
@@ -638,7 +641,7 @@ describe("DropHandler", () => {
 			);
 		});
 
-		it("calls replaceSection for each item when leaveBacklink enabled", async () => {
+		it("calls appendLink for each item when leaveBacklink enabled", async () => {
 			settings.leaveBacklink = true;
 			handler = new DropHandler(
 				app,
@@ -670,19 +673,10 @@ describe("DropHandler", () => {
 			const evt = createMockDragEvent(JSON.stringify(multiDragData));
 			await handler.handleCanvasDrop(evt);
 
-			expect(backlinkWriter.replaceSection).toHaveBeenCalledTimes(2);
-			expect(backlinkWriter.replaceSection).toHaveBeenCalledWith(
-				sourceFile,
-				5,
-				2,
-				"Section-A",
-			);
-			expect(backlinkWriter.replaceSection).toHaveBeenCalledWith(
-				sourceFile,
-				10,
-				2,
-				"Section-B",
-			);
+			expect(backlinkWriter.appendLink).toHaveBeenCalledTimes(2);
+			expect(backlinkWriter.appendLink).toHaveBeenCalledWith(sourceFile, 5, 2, "Section-A");
+			expect(backlinkWriter.appendLink).toHaveBeenCalledWith(sourceFile, 10, 2, "Section-B");
+			expect(backlinkWriter.replaceSection).not.toHaveBeenCalled();
 		});
 
 		it("multi preview onConfirm calls createMultipleNodes", async () => {
@@ -784,6 +778,545 @@ describe("DropHandler", () => {
 			await handler.handleCanvasDrop(evt);
 
 			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("reference mode - heading drop", () => {
+		const headingDragData = {
+			type: "heading-explorer-drag",
+			filePath: "notes/test.md",
+			headingText: "Section A",
+			headingLevel: 2,
+			headingLine: 5,
+		};
+
+		beforeEach(() => {
+			settings.dropMode = "reference";
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+			);
+		});
+
+		it("does not call fileCreator.createFile", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+
+		it("does not call contentExtractor.extractContentWithHeading", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(contentExtractor.extractContentWithHeading).not.toHaveBeenCalled();
+		});
+
+		it("does not call backlinkWriter.replaceSection", async () => {
+			settings.leaveBacklink = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+			);
+
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(backlinkWriter.replaceSection).not.toHaveBeenCalled();
+		});
+
+		it("calls addNodeToCanvas with subpath", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(
+				canvasView.canvas,
+				sourceFile,
+				{ x: 100, y: 200 },
+				"#Section A",
+			);
+		});
+
+		it("shows reference notice", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(noticeSpy).toHaveBeenCalledWith('Added "Section A" reference to Canvas');
+		});
+
+		it("skips preview even when showPreviewBeforeCreate is enabled", async () => {
+			const previewBridge = {
+				requestPreview: vi.fn().mockReturnValue(true),
+			} as unknown as PreviewBridge;
+			settings.showPreviewBeforeCreate = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+				previewBridge,
+			);
+
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(headingDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(previewBridge.requestPreview as Mock).not.toHaveBeenCalled();
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(
+				canvasView.canvas,
+				sourceFile,
+				{ x: 100, y: 200 },
+				"#Section A",
+			);
+		});
+	});
+
+	describe("reference mode - multi-heading drop", () => {
+		const multiDragData = {
+			type: "multi-heading-drag",
+			items: [
+				{
+					type: "heading-explorer-drag",
+					filePath: "notes/test.md",
+					headingText: "Section A",
+					headingLevel: 2,
+					headingLine: 5,
+				},
+				{
+					type: "heading-explorer-drag",
+					filePath: "notes/test.md",
+					headingText: "Section B",
+					headingLevel: 2,
+					headingLine: 10,
+				},
+			],
+		};
+
+		beforeEach(() => {
+			settings.dropMode = "reference";
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+			);
+		});
+
+		it("does not call fileCreator or contentExtractor", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(canvasOperator.addNodeToCanvas as Mock).mockReturnValue({
+				id: "n",
+				x: 0,
+				y: 0,
+				width: 400,
+				height: 300,
+			});
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(multiDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+			expect(contentExtractor.extractContentWithHeading).not.toHaveBeenCalled();
+		});
+
+		it("calls addNodeToCanvas with correct subpath for each item", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(canvasOperator.addNodeToCanvas as Mock).mockReturnValue({
+				id: "n",
+				x: 0,
+				y: 0,
+				width: 400,
+				height: 300,
+			});
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(multiDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledTimes(2);
+			expect((canvasOperator.addNodeToCanvas as Mock).mock.calls[0][3]).toBe("#Section A");
+			expect((canvasOperator.addNodeToCanvas as Mock).mock.calls[1][3]).toBe("#Section B");
+		});
+
+		it("groups created nodes", async () => {
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const mockNode = { id: "n", x: 0, y: 0, width: 400, height: 300 };
+			(canvasOperator.addNodeToCanvas as Mock).mockReturnValue(mockNode);
+			(canvasOperator as Record<string, unknown>).addGroupToCanvas = vi.fn();
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(multiDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect((canvasOperator as Record<string, Mock>).addGroupToCanvas).toHaveBeenCalledWith(
+				canvasView.canvas,
+				[mockNode, mockNode],
+			);
+		});
+
+		it("skips preview even when showPreviewBeforeCreate is enabled", async () => {
+			const previewBridge = {
+				requestPreview: vi.fn().mockReturnValue(true),
+			} as unknown as PreviewBridge;
+			settings.showPreviewBeforeCreate = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+				previewBridge,
+			);
+
+			const sourceFile = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(canvasOperator.addNodeToCanvas as Mock).mockReturnValue({
+				id: "n",
+				x: 0,
+				y: 0,
+				width: 400,
+				height: 300,
+			});
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(multiDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(previewBridge.requestPreview as Mock).not.toHaveBeenCalled();
+		});
+
+		it("skips items where source file is not TFile", async () => {
+			const multiDataMixed = {
+				type: "multi-heading-drag",
+				items: [
+					{
+						type: "heading-explorer-drag",
+						filePath: "missing.md",
+						headingText: "Gone",
+						headingLevel: 2,
+						headingLine: 1,
+					},
+					{
+						type: "heading-explorer-drag",
+						filePath: "notes/test.md",
+						headingText: "Section B",
+						headingLevel: 2,
+						headingLine: 10,
+					},
+				],
+			};
+
+			(app.vault.getAbstractFileByPath as Mock).mockImplementation((path: string) => {
+				if (path === "notes/test.md") {
+					return new TFile("notes/test.md");
+				}
+				return null;
+			});
+			(canvasOperator.addNodeToCanvas as Mock).mockReturnValue({
+				id: "n",
+				x: 0,
+				y: 0,
+				width: 400,
+				height: 300,
+			});
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(multiDataMixed));
+			await handler.handleCanvasDrop(evt);
+
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledTimes(1);
+			expect((canvasOperator.addNodeToCanvas as Mock).mock.calls[0][3]).toBe("#Section B");
+		});
+	});
+
+	describe("text-selection drop", () => {
+		const textSelectionDragData = {
+			type: "text-selection-drag",
+			filePath: "notes/article.md",
+			selectedText: "This is the selected paragraph text.",
+			title: "Selected Text",
+		};
+
+		it("creates file and adds node to canvas", async () => {
+			const sourceFile = new TFile("notes/article.md");
+			const newFile = new TFile("Selected-Text.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockResolvedValue(newFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(fileCreator.createFile).toHaveBeenCalledWith(
+				"Selected Text",
+				"This is the selected paragraph text.",
+				sourceFile,
+			);
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(canvasView.canvas, newFile, {
+				x: 100,
+				y: 200,
+			});
+		});
+
+		it("shows notice on success", async () => {
+			const sourceFile = new TFile("notes/article.md");
+			const newFile = new TFile("Selected-Text.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockResolvedValue(newFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(noticeSpy).toHaveBeenCalledWith('Created "Selected-Text" on Canvas');
+		});
+
+		it("does nothing when no active canvas", async () => {
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(null);
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+
+		it("shows Notice when source file is not TFile", async () => {
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(null);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(noticeSpy).toHaveBeenCalledWith("Source file not found");
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+
+		it("shows error notice when createFile throws", async () => {
+			const sourceFile = new TFile("notes/article.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockRejectedValue(new Error("create error"));
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(noticeSpy).toHaveBeenCalledWith("Failed to create note: create error");
+		});
+
+		it("calls requestPreview when showPreviewBeforeCreate and previewBridge", async () => {
+			const previewBridge = {
+				requestPreview: vi.fn().mockReturnValue(true),
+			} as unknown as PreviewBridge;
+			settings.showPreviewBeforeCreate = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+				previewBridge,
+			);
+
+			const sourceFile = new TFile("notes/article.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			expect(previewBridge.requestPreview as Mock).toHaveBeenCalledWith(
+				[
+					{
+						headingText: "Selected Text",
+						headingLevel: 0,
+						headingLine: 0,
+						type: "heading-explorer-drag",
+						filePath: "notes/article.md",
+					},
+				],
+				["This is the selected paragraph text."],
+				expect.any(Function),
+				expect.any(Function),
+			);
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+
+		it("preview onConfirm creates node", async () => {
+			const previewBridge = {
+				requestPreview: vi.fn().mockReturnValue(true),
+			} as unknown as PreviewBridge;
+			settings.showPreviewBeforeCreate = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+				previewBridge,
+			);
+
+			const sourceFile = new TFile("notes/article.md");
+			const newFile = new TFile("Selected-Text.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockResolvedValue(newFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			const onConfirm = (previewBridge.requestPreview as Mock).mock.calls[0][2] as (
+				indices: number[],
+			) => Promise<void>;
+			await onConfirm([0]);
+
+			expect(fileCreator.createFile).toHaveBeenCalledWith(
+				"Selected Text",
+				"This is the selected paragraph text.",
+				sourceFile,
+			);
+		});
+
+		it("preview onConfirm with empty indices does nothing", async () => {
+			const previewBridge = {
+				requestPreview: vi.fn().mockReturnValue(true),
+			} as unknown as PreviewBridge;
+			settings.showPreviewBeforeCreate = true;
+			handler = new DropHandler(
+				app,
+				settings,
+				canvasObserver,
+				canvasOperator,
+				contentExtractor,
+				fileCreator,
+				backlinkWriter,
+				previewBridge,
+			);
+
+			const sourceFile = new TFile("notes/article.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(textSelectionDragData));
+			await handler.handleCanvasDrop(evt);
+
+			const onConfirm = (previewBridge.requestPreview as Mock).mock.calls[0][2] as (
+				indices: number[],
+			) => Promise<void>;
+			await onConfirm([]);
+
+			expect(fileCreator.createFile).not.toHaveBeenCalled();
+		});
+
+		it("derives title from first line when title is empty", async () => {
+			const data = {
+				type: "text-selection-drag",
+				filePath: "notes/article.md",
+				selectedText: "First line of text\nSecond line",
+				title: "",
+			};
+			const sourceFile = new TFile("notes/article.md");
+			const newFile = new TFile("First-line-of-text.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockResolvedValue(newFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(data));
+			await handler.handleCanvasDrop(evt);
+
+			expect(fileCreator.createFile).toHaveBeenCalledWith(
+				"First line of text",
+				"First line of text\nSecond line",
+				sourceFile,
+			);
+		});
+
+		it("truncates long derived title to 50 characters", async () => {
+			const longText = "A".repeat(80);
+			const data = {
+				type: "text-selection-drag",
+				filePath: "notes/article.md",
+				selectedText: longText,
+				title: "",
+			};
+			const sourceFile = new TFile("notes/article.md");
+			const newFile = new TFile("truncated.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(sourceFile);
+			(fileCreator.createFile as Mock).mockResolvedValue(newFile);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const evt = createMockDragEvent(JSON.stringify(data));
+			await handler.handleCanvasDrop(evt);
+
+			const calledTitle = (fileCreator.createFile as Mock).mock.calls[0][0] as string;
+			expect(calledTitle.length).toBeLessThanOrEqual(50);
 		});
 	});
 });

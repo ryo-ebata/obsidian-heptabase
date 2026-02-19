@@ -10,6 +10,7 @@ export interface HeptabaseSettings {
 	quickCardDefaultTitle: string;
 	recursiveDecomposition: boolean;
 	showPreviewBeforeCreate: boolean;
+	dropMode: "reference" | "extract";
 	multiDropLayout: "grid" | "horizontal" | "vertical";
 	multiDropColumns: number;
 	multiDropGap: number;
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: HeptabaseSettings = {
 	quickCardDefaultTitle: "Untitled",
 	recursiveDecomposition: false,
 	showPreviewBeforeCreate: false,
+	dropMode: "reference",
 	multiDropLayout: "grid",
 	multiDropColumns: 3,
 	multiDropGap: 40,

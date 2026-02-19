@@ -5,7 +5,13 @@ import type { ContentExtractor } from "@/services/content-extractor";
 import type { FileCreator } from "@/services/file-creator";
 import type { PreviewBridge } from "@/services/preview-bridge";
 import type { Canvas, CanvasNode } from "@/types/obsidian-canvas";
-import type { DragData, HeadingDragData, MultiHeadingDragData, NoteDragData } from "@/types/plugin";
+import type {
+	DragData,
+	HeadingDragData,
+	MultiHeadingDragData,
+	NoteDragData,
+	TextSelectionDragData,
+} from "@/types/plugin";
 import type { HeptabaseSettings } from "@/types/settings";
 import { calculateGridPositions } from "@/utils/grid-layout";
 import { notifyError } from "@/utils/notify-error";
@@ -47,6 +53,8 @@ export class DropHandler {
 			await this.handleHeadingDrop(evt, dragData);
 		} else if (dragData.type === "multi-heading-drag") {
 			await this.handleMultiHeadingDrop(evt, dragData);
+		} else if (dragData.type === "text-selection-drag") {
+			await this.handleTextSelectionDrop(evt, dragData);
 		}
 	}
 
@@ -84,14 +92,21 @@ export class DropHandler {
 				return;
 			}
 
+			const position = getDropPosition(evt);
+
+			if (this.settings.dropMode === "reference") {
+				const subpath = `#${dragData.headingText}`;
+				this.canvasOperator.addNodeToCanvas(canvasView.canvas, sourceFile, position, subpath);
+				new Notice(`Added "${dragData.headingText}" reference to Canvas`);
+				return;
+			}
+
 			const content = await this.app.vault.read(sourceFile);
 			const extracted = this.contentExtractor.extractContentWithHeading(
 				content,
 				dragData.headingLine,
 				dragData.headingLevel,
 			);
-
-			const position = getDropPosition(evt);
 
 			const createNode = async () => {
 				const newFile = await this.fileCreator.createFile(
@@ -101,7 +116,7 @@ export class DropHandler {
 				);
 				this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, position);
 				if (this.settings.leaveBacklink) {
-					await this.backlinkWriter.replaceSection(
+					await this.backlinkWriter.appendLink(
 						sourceFile,
 						dragData.headingLine,
 						dragData.headingLevel,
@@ -148,6 +163,12 @@ export class DropHandler {
 		try {
 			const position = getDropPosition(evt);
 			const items = dragData.items;
+
+			if (this.settings.dropMode === "reference") {
+				await this.addMultipleReferences(items, position, canvasView);
+				return;
+			}
+
 			const contents: string[] = [];
 
 			for (const item of items) {
@@ -192,6 +213,48 @@ export class DropHandler {
 		}
 	}
 
+	private async addMultipleReferences(
+		items: HeadingDragData[],
+		origin: { x: number; y: number },
+		canvasView: { canvas: Canvas },
+	): Promise<void> {
+		const positions = calculateGridPositions(origin, items.length, {
+			layout: this.settings.multiDropLayout,
+			columns: this.settings.multiDropColumns,
+			gap: this.settings.multiDropGap,
+			nodeWidth: this.settings.defaultNodeWidth,
+			nodeHeight: this.settings.defaultNodeHeight,
+		});
+
+		const createdNodes: CanvasNode[] = [];
+
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i]!;
+			const sourceFile = this.app.vault.getAbstractFileByPath(item.filePath);
+			if (!(sourceFile instanceof TFile)) {
+				continue;
+			}
+
+			const subpath = `#${item.headingText}`;
+			const node = this.canvasOperator.addNodeToCanvas(
+				canvasView.canvas,
+				sourceFile,
+				positions[i]!,
+				subpath,
+			);
+
+			if (node) {
+				createdNodes.push(node);
+			}
+		}
+
+		if (createdNodes.length > 1) {
+			this.canvasOperator.addGroupToCanvas(canvasView.canvas, createdNodes);
+		}
+
+		new Notice(`Added ${createdNodes.length} references to Canvas`);
+	}
+
 	private async createMultipleNodes(
 		items: HeadingDragData[],
 		contents: string[],
@@ -225,7 +288,7 @@ export class DropHandler {
 			}
 
 			if (this.settings.leaveBacklink) {
-				await this.backlinkWriter.replaceSection(
+				await this.backlinkWriter.appendLink(
 					sourceFile,
 					item.headingLine,
 					item.headingLevel,
@@ -239,5 +302,73 @@ export class DropHandler {
 		}
 
 		new Notice(`Created ${createdNodes.length} nodes on Canvas`);
+	}
+
+	private async handleTextSelectionDrop(
+		evt: DragEvent,
+		dragData: TextSelectionDragData,
+	): Promise<void> {
+		const canvasView = this.canvasObserver.getActiveCanvasView();
+		if (!canvasView) {
+			return;
+		}
+
+		try {
+			const sourceFile = this.app.vault.getAbstractFileByPath(dragData.filePath);
+			if (!(sourceFile instanceof TFile)) {
+				new Notice("Source file not found");
+				return;
+			}
+
+			const position = getDropPosition(evt);
+			const title = this.deriveTitle(dragData);
+
+			const createNode = async () => {
+				const newFile = await this.fileCreator.createFile(title, dragData.selectedText, sourceFile);
+				this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, position);
+				new Notice(`Created "${newFile.basename}" on Canvas`);
+			};
+
+			if (this.settings.showPreviewBeforeCreate && this.previewBridge) {
+				const previewItem: HeadingDragData = {
+					type: "heading-explorer-drag",
+					filePath: dragData.filePath,
+					headingText: title,
+					headingLevel: 0,
+					headingLine: 0,
+				};
+				this.previewBridge.requestPreview(
+					[previewItem],
+					[dragData.selectedText],
+					async (selectedIndices: number[]) => {
+						if (selectedIndices.length === 0) {
+							return;
+						}
+						try {
+							await createNode();
+						} catch (error) {
+							notifyError("Failed to create note", error);
+						}
+					},
+					() => {},
+				);
+				return;
+			}
+
+			await createNode();
+		} catch (error) {
+			notifyError("Failed to create note", error);
+		}
+	}
+
+	private deriveTitle(dragData: TextSelectionDragData): string {
+		if (dragData.title) {
+			return dragData.title;
+		}
+		const firstLine = dragData.selectedText.split("\n")[0] ?? "Untitled";
+		if (firstLine.length <= 50) {
+			return firstLine;
+		}
+		return firstLine.slice(0, 50);
 	}
 }

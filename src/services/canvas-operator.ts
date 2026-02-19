@@ -14,8 +14,9 @@ export class CanvasOperator {
 		canvas: Canvas,
 		file: TFile,
 		position: { x: number; y: number },
+		subpath?: string,
 	): CanvasNode | null {
-		if (typeof canvas.createFileNode === "function") {
+		if (!subpath && typeof canvas.createFileNode === "function") {
 			return canvas.createFileNode({
 				file,
 				pos: position,
@@ -29,7 +30,16 @@ export class CanvasOperator {
 
 		const data = canvas.getData();
 		const id = generateId();
-		const newNode = {
+		const newNode: {
+			id: string;
+			type: "file";
+			file: string;
+			x: number;
+			y: number;
+			width: number;
+			height: number;
+			subpath?: string;
+		} = {
 			id,
 			type: "file" as const,
 			file: file.path,
@@ -38,6 +48,10 @@ export class CanvasOperator {
 			width: this.settings.defaultNodeWidth,
 			height: this.settings.defaultNodeHeight,
 		};
+
+		if (subpath) {
+			newNode.subpath = subpath;
+		}
 
 		data.nodes.push(newNode);
 		canvas.setData(data);
@@ -133,11 +147,21 @@ export class CanvasOperator {
 		canvasFile: TFile,
 		file: TFile,
 		position: { x: number; y: number },
+		subpath?: string,
 	): Promise<void> {
 		const raw = await this.app.vault.read(canvasFile);
 		const data: CanvasData = JSON.parse(raw);
 
-		data.nodes.push({
+		const newNode: {
+			id: string;
+			type: "file";
+			file: string;
+			x: number;
+			y: number;
+			width: number;
+			height: number;
+			subpath?: string;
+		} = {
 			id: generateId(),
 			type: "file",
 			file: file.path,
@@ -145,8 +169,13 @@ export class CanvasOperator {
 			y: position.y,
 			width: this.settings.defaultNodeWidth,
 			height: this.settings.defaultNodeHeight,
-		});
+		};
 
+		if (subpath) {
+			newNode.subpath = subpath;
+		}
+
+		data.nodes.push(newNode);
 		await this.app.vault.modify(canvasFile, JSON.stringify(data, null, "\t"));
 	}
 }

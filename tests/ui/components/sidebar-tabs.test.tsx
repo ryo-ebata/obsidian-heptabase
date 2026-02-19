@@ -4,10 +4,10 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 describe("SidebarTabs", () => {
-	it("renders Card Library and ToC tabs", () => {
+	it("renders Card Library and Article tabs", () => {
 		render(<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />);
 		expect(screen.getByText("Card Library")).toBeDefined();
-		expect(screen.getByText("ToC")).toBeDefined();
+		expect(screen.getByText("Article")).toBeDefined();
 	});
 
 	it("marks the active tab with accent border", () => {
@@ -17,24 +17,24 @@ describe("SidebarTabs", () => {
 		expect(tabs[1].classList.contains("border-b-transparent")).toBe(true);
 	});
 
-	it("marks toc tab as active when activeTab is toc", () => {
-		const { container } = render(<SidebarTabs activeTab="toc" onTabChange={vi.fn()} />);
+	it("marks article-viewer tab as active when activeTab is article-viewer", () => {
+		const { container } = render(<SidebarTabs activeTab="article-viewer" onTabChange={vi.fn()} />);
 		const tabs = container.querySelectorAll("button");
 		expect(tabs[0].classList.contains("border-b-transparent")).toBe(true);
 		expect(tabs[1].classList.contains("border-b-ob-accent")).toBe(true);
 	});
 
-	it("calls onTabChange when a tab is clicked", () => {
+	it("calls onTabChange when Article tab is clicked", () => {
 		const onTabChange = vi.fn();
 		render(<SidebarTabs activeTab="card-library" onTabChange={onTabChange} />);
 
-		fireEvent.click(screen.getByText("ToC"));
-		expect(onTabChange).toHaveBeenCalledWith("toc");
+		fireEvent.click(screen.getByText("Article"));
+		expect(onTabChange).toHaveBeenCalledWith("article-viewer");
 	});
 
 	it("calls onTabChange with card-library when Card Library tab is clicked", () => {
 		const onTabChange = vi.fn();
-		render(<SidebarTabs activeTab="toc" onTabChange={onTabChange} />);
+		render(<SidebarTabs activeTab="article-viewer" onTabChange={onTabChange} />);
 
 		fireEvent.click(screen.getByText("Card Library"));
 		expect(onTabChange).toHaveBeenCalledWith("card-library");

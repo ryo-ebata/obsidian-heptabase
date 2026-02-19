@@ -59,12 +59,14 @@ export class Vault {
 }
 
 export class FileManager {
-	processFrontMatter = vi.fn().mockImplementation(
-		async (_file: TFile, fn: (frontmatter: Record<string, unknown>) => void) => {
-			const frontmatter: Record<string, unknown> = {};
-			fn(frontmatter);
-		},
-	);
+	processFrontMatter = vi
+		.fn()
+		.mockImplementation(
+			async (_file: TFile, fn: (frontmatter: Record<string, unknown>) => void) => {
+				const frontmatter: Record<string, unknown> = {};
+				fn(frontmatter);
+			},
+		);
 }
 
 export class Workspace {
@@ -148,6 +150,14 @@ export abstract class ItemView {
 
 	onOpen = vi.fn().mockResolvedValue(undefined);
 	onClose = vi.fn().mockResolvedValue(undefined);
+}
+
+export const MarkdownRenderer = {
+	render: vi.fn().mockResolvedValue(undefined),
+};
+
+export class Component {
+	_stub = true;
 }
 
 export class Notice {

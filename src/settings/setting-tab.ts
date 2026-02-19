@@ -90,6 +90,17 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(this.updateSetting("showPreviewBeforeCreate")),
 			);
 
+		new Setting(containerEl)
+			.setName("Drop mode")
+			.setDesc("How headings are added to Canvas on drop")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("reference", "Reference (subpath)")
+					.addOption("extract", "Extract (create file)")
+					.setValue(this.settings.dropMode)
+					.onChange(this.updateSetting("dropMode") as (value: string) => void),
+			);
+
 		containerEl.createEl("h2", { text: "Quick Card Settings" });
 
 		new Setting(containerEl)

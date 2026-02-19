@@ -41,6 +41,33 @@ export class BacklinkWriter {
 		await this.app.vault.modify(sourceFile, newContent);
 	}
 
+	async appendLink(
+		sourceFile: TFile,
+		headingLine: number,
+		headingLevel: number,
+		newFileName: string,
+	): Promise<void> {
+		const content = await this.app.vault.read(sourceFile);
+		const range = this.extractor.getSectionRange(content, headingLine, headingLevel);
+
+		if (!range) {
+			return;
+		}
+
+		const lines = content.split("\n");
+		const link = `> See also: [[${newFileName}]]`;
+
+		const beforePart = lines.slice(0, range.contentEnd);
+		const afterPart = lines.slice(range.contentEnd);
+
+		const newContent = [...beforePart, "", link, "", ...afterPart]
+			.join("\n")
+			.replace(/\n{3,}/g, "\n\n")
+			.trimEnd();
+
+		await this.app.vault.modify(sourceFile, newContent);
+	}
+
 	async addConnection(
 		file: TFile,
 		target: string,

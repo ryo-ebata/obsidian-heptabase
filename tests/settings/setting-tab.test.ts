@@ -73,9 +73,9 @@ describe("SettingTab", () => {
 			expect(h2Texts).toContain("Edge Settings");
 		});
 
-		it("creates 14 Setting instances", () => {
+		it("creates 15 Setting instances", () => {
 			tab.display();
-			expect(settingInstances).toHaveLength(14);
+			expect(settingInstances).toHaveLength(15);
 		});
 
 		it("calls setName and setDesc on all Settings", () => {
@@ -179,9 +179,23 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates quickCardDefaultTitle (text - Setting #7)", () => {
+		it("updates dropMode (dropdown - Setting #7)", () => {
 			tab.display();
 			const instance = settingInstances[7];
+			expect(instance.addDropdown).toHaveBeenCalled();
+			expect(instance.addOption).toHaveBeenCalledWith("reference", "Reference (subpath)");
+			expect(instance.addOption).toHaveBeenCalledWith("extract", "Extract (create file)");
+			expect(instance.setValue).toHaveBeenCalledWith(DEFAULT_SETTINGS.dropMode);
+
+			const onChange = getOnChangeCallback(instance);
+			onChange("extract" as never);
+			expect(settings.dropMode).toBe("extract");
+			expect(onSettingsChange).toHaveBeenCalledWith(settings);
+		});
+
+		it("updates quickCardDefaultTitle (text - Setting #8)", () => {
+			tab.display();
+			const instance = settingInstances[8];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. Untitled");
 
@@ -191,9 +205,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates enableEdgeSync (toggle - Setting #8)", () => {
+		it("updates enableEdgeSync (toggle - Setting #9)", () => {
 			tab.display();
-			const instance = settingInstances[8];
+			const instance = settingInstances[9];
 			expect(instance.addToggle).toHaveBeenCalled();
 
 			const onChange = getOnChangeCallback(instance);
@@ -202,9 +216,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates multiDropLayout (dropdown - Setting #9)", () => {
+		it("updates multiDropLayout (dropdown - Setting #10)", () => {
 			tab.display();
-			const instance = settingInstances[9];
+			const instance = settingInstances[10];
 			expect(instance.addDropdown).toHaveBeenCalled();
 			expect(instance.addOption).toHaveBeenCalledWith("grid", "Grid");
 			expect(instance.addOption).toHaveBeenCalledWith("horizontal", "Horizontal");
@@ -217,9 +231,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates multiDropColumns (slider - Setting #10)", () => {
+		it("updates multiDropColumns (slider - Setting #11)", () => {
 			tab.display();
-			const instance = settingInstances[10];
+			const instance = settingInstances[11];
 			expect(instance.addSlider).toHaveBeenCalled();
 			expect(instance.setLimits).toHaveBeenCalledWith(2, 6, 1);
 
@@ -229,9 +243,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates multiDropGap (slider - Setting #11)", () => {
+		it("updates multiDropGap (slider - Setting #12)", () => {
 			tab.display();
-			const instance = settingInstances[11];
+			const instance = settingInstances[12];
 			expect(instance.addSlider).toHaveBeenCalled();
 			expect(instance.setLimits).toHaveBeenCalledWith(10, 100, 10);
 
@@ -241,9 +255,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates defaultEdgeColor (text - Setting #12)", () => {
+		it("updates defaultEdgeColor (text - Setting #13)", () => {
 			tab.display();
-			const instance = settingInstances[12];
+			const instance = settingInstances[13];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. 1");
 
@@ -253,9 +267,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates defaultEdgeLabel (text - Setting #13)", () => {
+		it("updates defaultEdgeLabel (text - Setting #14)", () => {
 			tab.display();
-			const instance = settingInstances[13];
+			const instance = settingInstances[14];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. relates to");
 

@@ -18,9 +18,20 @@ export interface MultiHeadingDragData {
 	items: HeadingDragData[];
 }
 
-export type DragData = HeadingDragData | NoteDragData | MultiHeadingDragData;
+export interface TextSelectionDragData {
+	type: "text-selection-drag";
+	filePath: string;
+	selectedText: string;
+	title: string;
+}
 
-export type SidebarTab = "card-library" | "toc" | "canvas-info";
+export type DragData =
+	| HeadingDragData
+	| NoteDragData
+	| MultiHeadingDragData
+	| TextSelectionDragData;
+
+export type SidebarTab = "card-library" | "article-viewer" | "canvas-info";
 
 export interface EdgeOptions {
 	fromNode: string;

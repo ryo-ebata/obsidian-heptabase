@@ -87,6 +87,72 @@ describe("BacklinkWriter", () => {
 		});
 	});
 
+	describe("appendLink", () => {
+		it("appends link at end of section, keeping original content", async () => {
+			const content =
+				"## First Section\n\nContent of the first\nsection content.\n\n## Second Section\n\nOther content.";
+			app.vault.read = vi.fn().mockResolvedValue(content);
+
+			const sourceFile = new TFile("notes/source.md");
+			await writer.appendLink(sourceFile, 0, 2, "First Section");
+
+			expect(app.vault.modify).toHaveBeenCalledWith(
+				sourceFile,
+				"## First Section\n\nContent of the first\nsection content.\n\n> See also: [[First Section]]\n\n## Second Section\n\nOther content.",
+			);
+		});
+
+		it("appends link at end of last section", async () => {
+			const content =
+				"## First Section\n\nSome content.\n\n## Last Section\n\nFinal content.\nMore lines.";
+			app.vault.read = vi.fn().mockResolvedValue(content);
+
+			const sourceFile = new TFile("notes/source.md");
+			await writer.appendLink(sourceFile, 4, 2, "Last Section");
+
+			expect(app.vault.modify).toHaveBeenCalledWith(
+				sourceFile,
+				"## First Section\n\nSome content.\n\n## Last Section\n\nFinal content.\nMore lines.\n\n> See also: [[Last Section]]",
+			);
+		});
+
+		it("appends link to empty section", async () => {
+			const content = "## Empty Section\n## Next Section\n\nContent.";
+			app.vault.read = vi.fn().mockResolvedValue(content);
+
+			const sourceFile = new TFile("notes/source.md");
+			await writer.appendLink(sourceFile, 0, 2, "Empty Section");
+
+			expect(app.vault.modify).toHaveBeenCalledWith(
+				sourceFile,
+				"## Empty Section\n\n> See also: [[Empty Section]]\n\n## Next Section\n\nContent.",
+			);
+		});
+
+		it("does nothing when heading line is out of range", async () => {
+			const content = "## Section\n\nContent.";
+			app.vault.read = vi.fn().mockResolvedValue(content);
+
+			const sourceFile = new TFile("notes/source.md");
+			await writer.appendLink(sourceFile, 999, 2, "Section");
+
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
+		it("handles Japanese heading text", async () => {
+			const content = "## 日本語の見出し\n\n日本語の本文です。\n\n## 次のセクション";
+			app.vault.read = vi.fn().mockResolvedValue(content);
+
+			const sourceFile = new TFile("notes/source.md");
+			await writer.appendLink(sourceFile, 0, 2, "日本語の見出し");
+
+			expect(app.vault.modify).toHaveBeenCalledWith(
+				sourceFile,
+				"## 日本語の見出し\n\n日本語の本文です。\n\n> See also: [[日本語の見出し]]\n\n## 次のセクション",
+			);
+		});
+	});
+
 	describe("addConnection", () => {
 		it("adds outgoing connection to empty frontmatter", async () => {
 			const file = new TFile("notes/source.md");
