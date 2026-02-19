@@ -60,7 +60,7 @@ describe("CardGrid", () => {
 		expect(empty?.classList.contains("text-center")).toBe(true);
 	});
 
-	it("renders with grid layout classes", () => {
+	it("wraps grid in a container query parent", () => {
 		const results: SearchResult[] = [
 			{
 				file: new TFile("note1.md") as never,
@@ -69,8 +69,11 @@ describe("CardGrid", () => {
 		];
 
 		const { container } = render(<CardGrid results={results} />, { wrapper });
-		const grid = container.querySelector(".grid.grid-cols-2.gap-2");
+		const cqParent = container.querySelector(".\\@container");
+		expect(cqParent).not.toBeNull();
+		const grid = cqParent!.querySelector(".grid.grid-cols-1.gap-2");
 		expect(grid).not.toBeNull();
+		expect(grid!.classList.toString()).toContain("@[320px]:grid-cols-2");
 	});
 
 	it("renders only first page of items for large result sets", () => {

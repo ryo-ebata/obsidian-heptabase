@@ -89,7 +89,7 @@ export function NoteCard({ file, excerpt }: NoteCardProps): React.ReactElement {
 		[app.workspace, file, settings.defaultNodeWidth, settings.defaultNodeHeight, openInArticle],
 	);
 
-	const className = `p-2 rounded border border-ob-border-subtle cursor-grab hover:bg-ob-hover transition-all duration-150 ease-out hover:-translate-y-0.5 ${isDragging ? "opacity-50" : ""}`;
+	const className = `p-2 rounded border border-ob-border-subtle hover:border-ob-border cursor-grab hover:bg-ob-hover transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md ${isDragging ? "opacity-50" : ""}`;
 
 	return (
 		<div

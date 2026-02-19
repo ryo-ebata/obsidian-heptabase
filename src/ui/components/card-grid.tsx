@@ -17,11 +17,13 @@ export function CardGrid({ results }: CardGridProps): React.ReactElement {
 	}
 
 	return (
-		<div className="grid grid-cols-2 gap-2">
-			{visibleItems.map((result) => (
-				<NoteCard key={result.file.path} file={result.file} excerpt={result.excerpt} />
-			))}
-			{hasMore && <div ref={sentinelRef} data-testid="sentinel" className="h-full" />}
+		<div className="@container">
+			<div className="grid grid-cols-1 @[320px]:grid-cols-2 gap-2">
+				{visibleItems.map((result) => (
+					<NoteCard key={result.file.path} file={result.file} excerpt={result.excerpt} />
+				))}
+				{hasMore && <div ref={sentinelRef} data-testid="sentinel" className="h-full" />}
+			</div>
 		</div>
 	);
 }

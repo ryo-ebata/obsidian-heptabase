@@ -99,17 +99,18 @@ describe("NoteCard", () => {
 		expect(title!.classList.contains("font-medium")).toBe(true);
 	});
 
-	it("uses subtle border class", () => {
+	it("uses subtle border with hover highlight", () => {
 		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
 		const card = container.querySelector("[draggable]");
 		expect(card!.classList.contains("border-ob-border-subtle")).toBe(true);
+		expect(card!.classList.toString()).toContain("hover:border-ob-border");
 	});
 
 	it("has hover transition classes", () => {
 		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
 		const card = container.querySelector("[draggable]");
 		expect(card!.classList.contains("transition-all")).toBe(true);
-		expect(card!.classList.contains("duration-150")).toBe(true);
+		expect(card!.classList.contains("duration-200")).toBe(true);
 	});
 
 	it("shows context menu on right click", () => {
