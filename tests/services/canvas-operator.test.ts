@@ -334,9 +334,7 @@ describe("CanvasOperator", () => {
 			const canvas = createMockCanvas();
 			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
 
-			const nodes: CanvasNode[] = [
-				{ id: "a", x: 100, y: 100, width: 200, height: 200 },
-			];
+			const nodes: CanvasNode[] = [{ id: "a", x: 100, y: 100, width: 200, height: 200 }];
 
 			operator.addGroupToCanvas(canvas, nodes, "My Section");
 
@@ -357,9 +355,7 @@ describe("CanvasOperator", () => {
 			const canvas = createMockCanvas();
 			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
 
-			const nodes: CanvasNode[] = [
-				{ id: "a", x: 50, y: 75, width: 400, height: 300 },
-			];
+			const nodes: CanvasNode[] = [{ id: "a", x: 50, y: 75, width: 400, height: 300 }];
 
 			operator.addGroupToCanvas(canvas, nodes);
 
@@ -378,9 +374,7 @@ describe("CanvasOperator", () => {
 				edges: [],
 			});
 
-			const nodes: CanvasNode[] = [
-				{ id: "a", x: 0, y: 0, width: 200, height: 200 },
-			];
+			const nodes: CanvasNode[] = [{ id: "a", x: 0, y: 0, width: 200, height: 200 }];
 
 			operator.addGroupToCanvas(canvas, nodes);
 

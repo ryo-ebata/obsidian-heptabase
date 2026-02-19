@@ -72,6 +72,39 @@ export class SettingTab extends PluginSettingTab {
 				toggle.setValue(this.settings.leaveBacklink).onChange(this.updateSetting("leaveBacklink")),
 			);
 
+		containerEl.createEl("h2", { text: "Quick Card Settings" });
+
+		new Setting(containerEl)
+			.setName("Quick card default title")
+			.setDesc("Default title for quick cards created by double-click.")
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g. Untitled")
+					.setValue(this.settings.quickCardDefaultTitle)
+					.onChange(this.updateSetting("quickCardDefaultTitle")),
+			);
+
+		containerEl.createEl("h2", { text: "Edge Sync Settings" });
+
+		new Setting(containerEl)
+			.setName("Enable edge sync")
+			.setDesc("Automatically create backlinks when drawing arrows between file nodes on Canvas.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.settings.enableEdgeSync)
+					.onChange(this.updateSetting("enableEdgeSync")),
+			);
+
+		new Setting(containerEl)
+			.setName("Connections section name")
+			.setDesc("Heading name for the auto-generated connections section.")
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g. Connections")
+					.setValue(this.settings.connectionsSectionName)
+					.onChange(this.updateSetting("connectionsSectionName")),
+			);
+
 		containerEl.createEl("h2", { text: "Edge Settings" });
 
 		new Setting(containerEl)

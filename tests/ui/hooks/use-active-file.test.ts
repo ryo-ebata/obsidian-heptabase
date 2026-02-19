@@ -50,12 +50,14 @@ describe("useActiveFile", () => {
 		app.workspace.getActiveViewOfType = vi.fn().mockReturnValue({ file: file1 });
 
 		let fileOpenCallback: ((file: TFile | null) => void) | null = null;
-		app.workspace.on = vi.fn().mockImplementation((event: string, cb: (file: TFile | null) => void) => {
-			if (event === "file-open") {
-				fileOpenCallback = cb;
-			}
-			return { id: "mock-event-ref" };
-		});
+		app.workspace.on = vi
+			.fn()
+			.mockImplementation((event: string, cb: (file: TFile | null) => void) => {
+				if (event === "file-open") {
+					fileOpenCallback = cb;
+				}
+				return { id: "mock-event-ref" };
+			});
 
 		const { result } = renderHook(() => useActiveFile(), {
 			wrapper: createWrapper(app),

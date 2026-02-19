@@ -6,6 +6,9 @@ export interface HeptabaseSettings {
 	leaveBacklink: boolean;
 	defaultEdgeColor: string;
 	defaultEdgeLabel: string;
+	enableEdgeSync: boolean;
+	connectionsSectionName: string;
+	quickCardDefaultTitle: string;
 }
 
 export const DEFAULT_SETTINGS: HeptabaseSettings = {
@@ -16,4 +19,7 @@ export const DEFAULT_SETTINGS: HeptabaseSettings = {
 	leaveBacklink: false,
 	defaultEdgeColor: "",
 	defaultEdgeLabel: "",
+	enableEdgeSync: true,
+	connectionsSectionName: "Connections",
+	quickCardDefaultTitle: "Untitled",
 };

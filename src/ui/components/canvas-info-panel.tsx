@@ -19,13 +19,9 @@ export function CanvasInfoPanel(): React.ReactElement {
 	return (
 		<div className="p-2 h-full overflow-y-auto">
 			<div className="px-2 py-1 font-semibold mb-1">
-				{selectedNodes.length === 1
-					? "1 node selected"
-					: `${selectedNodes.length} nodes selected`}
+				{selectedNodes.length === 1 ? "1 node selected" : `${selectedNodes.length} nodes selected`}
 			</div>
-			{selectedNodes.length === 1 && (
-				<NodeConnections nodeId={selectedNodes[0].id} />
-			)}
+			{selectedNodes.length === 1 && <NodeConnections nodeId={selectedNodes[0].id} />}
 		</div>
 	);
 }
@@ -40,9 +36,7 @@ function NodeConnections({ nodeId }: { nodeId: string }): React.ReactElement | n
 	}
 
 	const data = canvasView.canvas.getData();
-	const connectedEdges = data.edges.filter(
-		(e) => e.fromNode === nodeId || e.toNode === nodeId,
-	);
+	const connectedEdges = data.edges.filter((e) => e.fromNode === nodeId || e.toNode === nodeId);
 
 	if (connectedEdges.length === 0) {
 		return null;

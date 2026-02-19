@@ -11,18 +11,14 @@ describe("SidebarTabs", () => {
 	});
 
 	it("marks the active tab with accent border", () => {
-		const { container } = render(
-			<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />,
-		);
+		const { container } = render(<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />);
 		const tabs = container.querySelectorAll("button");
 		expect(tabs[0].classList.contains("border-b-ob-accent")).toBe(true);
 		expect(tabs[1].classList.contains("border-b-transparent")).toBe(true);
 	});
 
 	it("marks toc tab as active when activeTab is toc", () => {
-		const { container } = render(
-			<SidebarTabs activeTab="toc" onTabChange={vi.fn()} />,
-		);
+		const { container } = render(<SidebarTabs activeTab="toc" onTabChange={vi.fn()} />);
 		const tabs = container.querySelectorAll("button");
 		expect(tabs[0].classList.contains("border-b-transparent")).toBe(true);
 		expect(tabs[1].classList.contains("border-b-ob-accent")).toBe(true);
@@ -45,9 +41,7 @@ describe("SidebarTabs", () => {
 	});
 
 	it("applies flex layout to container", () => {
-		const { container } = render(
-			<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />,
-		);
+		const { container } = render(<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />);
 		expect(container.querySelector(".flex.border-b")).not.toBeNull();
 	});
 });

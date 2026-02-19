@@ -1,11 +1,15 @@
+import { BacklinkWriter } from "@/services/backlink-writer";
 import { CanvasObserver } from "@/services/canvas-observer";
 import { CanvasOperator } from "@/services/canvas-operator";
 import { ContentExtractor } from "@/services/content-extractor";
+import { EdgeSync } from "@/services/edge-sync";
 import { FileCreator } from "@/services/file-creator";
+import { QuickCardCreator } from "@/services/quick-card-creator";
 import { SettingTab } from "@/settings/setting-tab";
 import type { CanvasView } from "@/types/obsidian-canvas";
 import type { DragData, HeadingDragData, NoteDragData } from "@/types/plugin";
 import { DEFAULT_SETTINGS, type HeptabaseSettings } from "@/types/settings";
+import { clientToCanvasPos } from "@/utils/canvas-coordinates";
 import { HeadingExplorerView, VIEW_TYPE_HEADING_EXPLORER } from "@/views/heading-explorer-view";
 import { Notice, Plugin, TFile, type WorkspaceLeaf } from "obsidian";
 
@@ -15,6 +19,9 @@ export default class HeptabasePlugin extends Plugin {
 	private fileCreator!: FileCreator;
 	private canvasOperator!: CanvasOperator;
 	private canvasObserver!: CanvasObserver;
+	private backlinkWriter!: BacklinkWriter;
+	private quickCardCreator!: QuickCardCreator;
+	private edgeSync!: EdgeSync;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -22,6 +29,9 @@ export default class HeptabasePlugin extends Plugin {
 		this.fileCreator = new FileCreator(this.app, this.settings);
 		this.canvasOperator = new CanvasOperator(this.app, this.settings);
 		this.canvasObserver = new CanvasObserver(this.app);
+		this.backlinkWriter = new BacklinkWriter(this.app);
+		this.quickCardCreator = new QuickCardCreator(this.fileCreator, this.canvasOperator);
+		this.edgeSync = new EdgeSync(this.app, this.settings.connectionsSectionName);
 
 		this.registerView(VIEW_TYPE_HEADING_EXPLORER, (leaf: WorkspaceLeaf) => {
 			return new HeadingExplorerView(leaf, this.app, this.settings);
@@ -36,6 +46,8 @@ export default class HeptabasePlugin extends Plugin {
 				this.settings = newSettings;
 				this.fileCreator = new FileCreator(this.app, this.settings);
 				this.canvasOperator = new CanvasOperator(this.app, this.settings);
+				this.quickCardCreator = new QuickCardCreator(this.fileCreator, this.canvasOperator);
+				this.edgeSync = new EdgeSync(this.app, this.settings.connectionsSectionName);
 				this.saveSettings();
 			}),
 		);
@@ -59,10 +71,48 @@ export default class HeptabasePlugin extends Plugin {
 				this.groupSelectedNodes();
 			},
 		});
+
+		this.addCommand({
+			id: "create-new-card",
+			name: "Create new card",
+			callback: () => {
+				this.createNewCardAtOrigin();
+			},
+		});
+
+		this.registerDomEvent(document, "dblclick", (evt: MouseEvent) => {
+			this.handleCanvasDblClick(evt);
+		});
+
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (this.settings.enableEdgeSync && file instanceof TFile) {
+					this.edgeSync.onCanvasModified(file);
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () => {
+				this.initializeEdgeSync();
+			}),
+		);
+
+		this.initializeEdgeSync();
 	}
 
 	async onunload(): Promise<void> {
+		this.edgeSync.reset();
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_HEADING_EXPLORER);
+	}
+
+	private initializeEdgeSync(): void {
+		const canvasView = this.getActiveCanvasView();
+		if (canvasView) {
+			this.edgeSync.initializeFromCanvas(canvasView.file);
+		} else {
+			this.edgeSync.reset();
+		}
 	}
 
 	private async activateView(): Promise<void> {
@@ -164,6 +214,15 @@ export default class HeptabasePlugin extends Plugin {
 				y: dropY,
 			});
 
+			if (this.settings.leaveBacklink) {
+				await this.backlinkWriter.replaceSection(
+					sourceFile,
+					dragData.headingLine,
+					dragData.headingLevel,
+					newFile.basename,
+				);
+			}
+
 			new Notice(`Created "${newFile.basename}" on Canvas`);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
@@ -207,6 +266,70 @@ export default class HeptabasePlugin extends Plugin {
 		});
 
 		new Notice("Connected selected nodes");
+	}
+
+	private async handleCanvasDblClick(evt: MouseEvent): Promise<void> {
+		if (!evt.metaKey && !evt.ctrlKey) {
+			return;
+		}
+
+		const target = evt.target as HTMLElement;
+		if (!target.closest(".canvas-wrapper")) {
+			return;
+		}
+		if (target.closest(".canvas-node")) {
+			return;
+		}
+
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
+			return;
+		}
+
+		const canvasEl = target.closest(".canvas-wrapper");
+		if (!canvasEl) {
+			return;
+		}
+
+		const position = clientToCanvasPos(
+			evt.clientX,
+			evt.clientY,
+			canvasView.canvas,
+			canvasEl as HTMLElement,
+		);
+
+		try {
+			const file = await this.quickCardCreator.createCardAtPosition(
+				canvasView.canvas,
+				canvasView.file,
+				position,
+				this.settings.quickCardDefaultTitle,
+			);
+			new Notice(`Created "${file.basename}" on Canvas`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			new Notice(`Failed to create card: ${message}`);
+		}
+	}
+
+	private async createNewCardAtOrigin(): Promise<void> {
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
+			return;
+		}
+
+		try {
+			const file = await this.quickCardCreator.createCardAtPosition(
+				canvasView.canvas,
+				canvasView.file,
+				{ x: 0, y: 0 },
+				this.settings.quickCardDefaultTitle,
+			);
+			new Notice(`Created "${file.basename}" on Canvas`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			new Notice(`Failed to create card: ${message}`);
+		}
 	}
 
 	private getActiveCanvasView(): CanvasView | null {

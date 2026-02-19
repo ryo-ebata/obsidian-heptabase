@@ -52,6 +52,7 @@ export class Vault {
 	create = vi.fn().mockResolvedValue(new TFile());
 	modify = vi.fn().mockResolvedValue(undefined);
 	createFolder = vi.fn().mockResolvedValue(undefined);
+	on = vi.fn().mockReturnValue({ id: "vault-event-ref" });
 	adapter = {
 		exists: vi.fn().mockResolvedValue(false),
 	};
@@ -60,7 +61,7 @@ export class Vault {
 export class Workspace {
 	getActiveViewOfType = vi.fn().mockReturnValue(null);
 	getLeavesOfType = vi.fn().mockReturnValue([]);
-	on = vi.fn();
+	on = vi.fn().mockReturnValue({ id: "workspace-event-ref" });
 	offref = vi.fn();
 	detachLeavesOfType = vi.fn();
 	getRightLeaf = vi.fn().mockReturnValue({
@@ -108,6 +109,7 @@ export abstract class Plugin {
 	registerView = vi.fn();
 	addSettingTab = vi.fn();
 	registerDomEvent = vi.fn();
+	registerEvent = vi.fn();
 }
 
 export abstract class ItemView {

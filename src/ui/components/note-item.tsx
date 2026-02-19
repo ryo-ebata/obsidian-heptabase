@@ -54,7 +54,11 @@ export function NoteItem({ file, headings }: NoteItemProps): React.ReactElement 
 				onDragEnd={handleDragEnd}
 			>
 				{hasHeadings && (
-					<span className={`flex transition-transform duration-100 ${expanded ? "" : "-rotate-90"}`}>{"\u25BC"}</span>
+					<span
+						className={`flex transition-transform duration-100 ${expanded ? "" : "-rotate-90"}`}
+					>
+						{"\u25BC"}
+					</span>
 				)}
 				<span>{file.basename}</span>
 			</div>

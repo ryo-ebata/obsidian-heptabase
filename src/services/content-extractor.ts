@@ -1,5 +1,10 @@
 const HEADING_PATTERN = /^(#{1,6}) /;
 
+export interface SectionRange {
+	contentStart: number;
+	contentEnd: number;
+}
+
 export class ContentExtractor {
 	extractContent(content: string, headingLine: number, headingLevel: number): string {
 		return this.extractRange(content, headingLine + 1, headingLine, headingLevel);
@@ -7,6 +12,19 @@ export class ContentExtractor {
 
 	extractContentWithHeading(content: string, headingLine: number, headingLevel: number): string {
 		return this.extractRange(content, headingLine, headingLine, headingLevel);
+	}
+
+	getSectionRange(content: string, headingLine: number, headingLevel: number): SectionRange | null {
+		const lines = content.split("\n");
+
+		if (headingLine < 0 || headingLine >= lines.length) {
+			return null;
+		}
+
+		const contentStart = headingLine + 1;
+		const contentEnd = this.findNextHeadingLine(lines, contentStart, headingLevel);
+
+		return { contentStart, contentEnd };
 	}
 
 	private extractRange(

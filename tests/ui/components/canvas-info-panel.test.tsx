@@ -86,11 +86,17 @@ describe("CanvasInfoPanel", () => {
 				getData: vi.fn().mockReturnValue({
 					nodes: [
 						{ id: "n1", type: "file", file: "notes/test.md", x: 0, y: 0, width: 400, height: 300 },
-						{ id: "n2", type: "file", file: "notes/other.md", x: 500, y: 0, width: 400, height: 300 },
+						{
+							id: "n2",
+							type: "file",
+							file: "notes/other.md",
+							x: 500,
+							y: 0,
+							width: 400,
+							height: 300,
+						},
 					],
-					edges: [
-						{ id: "e1", fromNode: "n1", fromSide: "right", toNode: "n2", toSide: "left" },
-					],
+					edges: [{ id: "e1", fromNode: "n1", fromSide: "right", toNode: "n2", toSide: "left" }],
 				}),
 				setData: vi.fn(),
 				requestSave: vi.fn(),

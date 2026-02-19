@@ -55,6 +55,52 @@ describe("ContentExtractor", () => {
 		});
 	});
 
+	describe("getSectionRange", () => {
+		it("returns range for a normal H2 section", () => {
+			const result = extractor.getSectionRange(sampleNote, 4, 2);
+			expect(result).toEqual({ contentStart: 5, contentEnd: 13 });
+		});
+
+		it("returns range for the last section (ends at file end)", () => {
+			const result = extractor.getSectionRange(sampleNote, 17, 2);
+			const lineCount = sampleNote.split("\n").length;
+			expect(result).toEqual({ contentStart: 18, contentEnd: lineCount });
+		});
+
+		it("returns empty range for a section immediately followed by another heading", () => {
+			const content = "## Empty Section\n## Next Section\n\nContent here.";
+			const result = extractor.getSectionRange(content, 0, 2);
+			expect(result).toEqual({ contentStart: 1, contentEnd: 1 });
+		});
+
+		it("returns range for H1 section", () => {
+			const content = "# Title\n\nIntro text.\n\n# Another Title\n\nOther content.";
+			const result = extractor.getSectionRange(content, 0, 1);
+			expect(result).toEqual({ contentStart: 1, contentEnd: 4 });
+		});
+
+		it("returns null for out-of-range line number", () => {
+			const result = extractor.getSectionRange(sampleNote, 999, 2);
+			expect(result).toBeNull();
+		});
+
+		it("returns null for negative line number", () => {
+			const result = extractor.getSectionRange(sampleNote, -1, 2);
+			expect(result).toBeNull();
+		});
+
+		it("returns range for H3 nested section", () => {
+			const result = extractor.getSectionRange(sampleNote, 9, 3);
+			expect(result).toEqual({ contentStart: 10, contentEnd: 13 });
+		});
+
+		it("handles Japanese headings", () => {
+			const content = "## 日本語の見出し\n\n日本語の本文です。\n\n## 次のセクション";
+			const result = extractor.getSectionRange(content, 0, 2);
+			expect(result).toEqual({ contentStart: 1, contentEnd: 4 });
+		});
+	});
+
 	describe("extractContentWithHeading", () => {
 		it("extracts content including the heading line", () => {
 			const result = extractor.extractContentWithHeading(sampleNote, 17, 2);

@@ -35,7 +35,10 @@ describe("TocPanel", () => {
 				{
 					heading: "Introduction",
 					level: 1,
-					position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 16, offset: 16 } },
+					position: {
+						start: { line: 0, col: 0, offset: 0 },
+						end: { line: 0, col: 16, offset: 16 },
+					},
 				},
 			],
 		});
@@ -51,12 +54,18 @@ describe("TocPanel", () => {
 				{
 					heading: "Section A",
 					level: 2,
-					position: { start: { line: 2, col: 0, offset: 10 }, end: { line: 2, col: 13, offset: 23 } },
+					position: {
+						start: { line: 2, col: 0, offset: 10 },
+						end: { line: 2, col: 13, offset: 23 },
+					},
 				},
 				{
 					heading: "Section B",
 					level: 2,
-					position: { start: { line: 5, col: 0, offset: 40 }, end: { line: 5, col: 13, offset: 53 } },
+					position: {
+						start: { line: 5, col: 0, offset: 40 },
+						end: { line: 5, col: 13, offset: 53 },
+					},
 				},
 			],
 		});
@@ -88,7 +97,10 @@ describe("TocPanel", () => {
 				{
 					heading: "Deep Heading",
 					level: 3,
-					position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 17, offset: 17 } },
+					position: {
+						start: { line: 0, col: 0, offset: 0 },
+						end: { line: 0, col: 17, offset: 17 },
+					},
 				},
 			],
 		});

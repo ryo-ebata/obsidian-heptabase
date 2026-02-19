@@ -38,9 +38,7 @@ describe("CanvasObserver", () => {
 
 		it("returns the canvas view when canvas is open", () => {
 			const canvasView = createMockCanvasView();
-			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([
-				{ view: canvasView },
-			]);
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
 			const result = observer.getActiveCanvasView();
 			expect(result).toBe(canvasView);
@@ -55,9 +53,7 @@ describe("CanvasObserver", () => {
 
 		it("returns empty array when no nodes are selected", () => {
 			const canvasView = createMockCanvasView([]);
-			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([
-				{ view: canvasView },
-			]);
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
 			expect(observer.getSelectedNodes()).toEqual([]);
 		});
@@ -66,9 +62,7 @@ describe("CanvasObserver", () => {
 			const node1 = createMockNode("node-1", 0, 0);
 			const node2 = createMockNode("node-2", 500, 0);
 			const canvasView = createMockCanvasView([node1, node2]);
-			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([
-				{ view: canvasView },
-			]);
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
 			const selected = observer.getSelectedNodes();
 			expect(selected).toHaveLength(2);
@@ -89,9 +83,7 @@ describe("CanvasObserver", () => {
 				canvas,
 				file: new TFile("test.canvas"),
 			};
-			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([
-				{ view: canvasView },
-			]);
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
 			expect(observer.getSelectedNodes()).toEqual([]);
 		});

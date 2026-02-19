@@ -24,9 +24,7 @@ describe("DragData types", () => {
 		});
 
 		it("can distinguish NoteDragData from HeadingDragData by type", () => {
-			const noteDrag = JSON.parse(
-				JSON.stringify({ type: "note-drag", filePath: "test.md" }),
-			);
+			const noteDrag = JSON.parse(JSON.stringify({ type: "note-drag", filePath: "test.md" }));
 			const headingDrag = JSON.parse(
 				JSON.stringify({ type: "heading-explorer-drag", filePath: "test.md" }),
 			);

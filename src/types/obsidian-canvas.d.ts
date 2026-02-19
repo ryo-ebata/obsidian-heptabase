@@ -50,6 +50,9 @@ export interface Canvas {
 		save?: boolean;
 	}): CanvasNode;
 	selection?: Set<CanvasNode>;
+	tx: number;
+	ty: number;
+	tZoom: number;
 }
 
 export interface CanvasNode {
