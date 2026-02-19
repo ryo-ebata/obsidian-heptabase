@@ -51,13 +51,13 @@ Heptabase-like heading explorer for Obsidian Canvas — search, browse, and drag
 
 ## Settings
 
-| Setting | Description | Default |
-|---------|-------------|---------|
+| Setting                | Description                                                                          | Default   |
+| ---------------------- | ------------------------------------------------------------------------------------ | --------- |
 | Extracted files folder | Folder to save extracted heading files. Leave empty to use the source file's folder. | _(empty)_ |
-| Default node width | Width for new Canvas nodes (200–800) | 400 |
-| Default node height | Height for new Canvas nodes (100–600) | 300 |
-| File name prefix | Prefix for extracted file names | _(empty)_ |
-| Leave backlink | Leave a backlink in the original note after extracting | Off |
+| Default node width     | Width for new Canvas nodes (200–800)                                                 | 400       |
+| Default node height    | Height for new Canvas nodes (100–600)                                                | 300       |
+| File name prefix       | Prefix for extracted file names                                                      | _(empty)_ |
+| Leave backlink         | Leave a backlink in the original note after extracting                               | Off       |
 
 ## Development
 
@@ -78,17 +78,9 @@ pnpm install
 pnpm dev        # Build in watch mode
 pnpm build      # Production build
 pnpm test       # Run tests
-pnpm lint       # Lint with Biome
-pnpm format     # Auto-format with Biome
+pnpm lint       # Lint with oxlint
+pnpm format     # Auto-format with oxfmt
 ```
-
-## Tech Stack
-
-- **TypeScript** (strict mode)
-- **React 18** — Sidebar UI
-- **Vitest** — Testing
-- **Biome** — Linting & formatting
-- **esbuild** — Bundling
 
 ## Contributing
 

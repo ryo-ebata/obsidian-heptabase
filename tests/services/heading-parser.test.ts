@@ -1,6 +1,6 @@
 import { HeadingParser } from "@/services/heading-parser";
 import { App, type CachedMetadata, TFile } from "obsidian";
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { type Mock, beforeEach, describe, expect, it } from "vitest";
 
 describe("HeadingParser", () => {
 	let app: App;

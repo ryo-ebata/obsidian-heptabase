@@ -127,7 +127,7 @@ export default class HeptabasePlugin extends Plugin {
 
 	private async loadSettings(): Promise<void> {
 		const data = await this.loadData();
-		this.settings = { ...DEFAULT_SETTINGS, ...(data ?? {}) };
+		this.settings = { ...DEFAULT_SETTINGS, ...data };
 	}
 
 	private async saveSettings(): Promise<void> {

@@ -51,13 +51,13 @@ Obsidian Canvas 向けの Heptabase 風見出しエクスプローラー — ノ
 
 ## 設定
 
-| 設定項目 | 説明 | デフォルト |
-|---------|------|-----------|
-| Extracted files folder | 抽出した見出しファイルの保存先フォルダ。空の場合はソースファイルと同じフォルダに保存。 | _(空)_ |
-| Default node width | 新しい Canvas ノードの幅（200〜800） | 400 |
-| Default node height | 新しい Canvas ノードの高さ（100〜600） | 300 |
-| File name prefix | 抽出ファイル名のプレフィックス | _(空)_ |
-| Leave backlink | 抽出後に元ノートにバックリンクを残す | オフ |
+| 設定項目               | 説明                                                                                   | デフォルト |
+| ---------------------- | -------------------------------------------------------------------------------------- | ---------- |
+| Extracted files folder | 抽出した見出しファイルの保存先フォルダ。空の場合はソースファイルと同じフォルダに保存。 | _(空)_     |
+| Default node width     | 新しい Canvas ノードの幅（200〜800）                                                   | 400        |
+| Default node height    | 新しい Canvas ノードの高さ（100〜600）                                                 | 300        |
+| File name prefix       | 抽出ファイル名のプレフィックス                                                         | _(空)_     |
+| Leave backlink         | 抽出後に元ノートにバックリンクを残す                                                   | オフ       |
 
 ## 開発
 
@@ -78,17 +78,9 @@ pnpm install
 pnpm dev        # ウォッチモードでビルド
 pnpm build      # プロダクションビルド
 pnpm test       # テスト実行
-pnpm lint       # Biome でリント
-pnpm format     # Biome で自動フォーマット
+pnpm lint       # oxlint でリント
+pnpm format     # oxfmt で自動フォーマット
 ```
-
-## 技術スタック
-
-- **TypeScript**（strict モード）
-- **React 18** — サイドバー UI
-- **Vitest** — テスティング
-- **Biome** — リンティング & フォーマッティング
-- **esbuild** — バンドリング
 
 ## コントリビューション
 
