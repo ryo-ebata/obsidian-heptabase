@@ -71,6 +71,28 @@ export class SettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(this.settings.leaveBacklink).onChange(this.updateSetting("leaveBacklink")),
 			);
+
+		containerEl.createEl("h2", { text: "Edge Settings" });
+
+		new Setting(containerEl)
+			.setName("Default edge color")
+			.setDesc("Default color for new edges (1-6 or hex). Leave empty for default.")
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g. 1")
+					.setValue(this.settings.defaultEdgeColor)
+					.onChange(this.updateSetting("defaultEdgeColor")),
+			);
+
+		new Setting(containerEl)
+			.setName("Default edge label")
+			.setDesc("Default label for new edges. Leave empty for no label.")
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g. relates to")
+					.setValue(this.settings.defaultEdgeLabel)
+					.onChange(this.updateSetting("defaultEdgeLabel")),
+			);
 	}
 
 	private updateSetting<K extends keyof HeptabaseSettings>(

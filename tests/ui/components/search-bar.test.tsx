@@ -25,8 +25,8 @@ describe("SearchBar", () => {
 		expect(onQueryChange).toHaveBeenCalledWith("new query");
 	});
 
-	it("applies heading-explorer-search class", () => {
+	it("applies width and margin styling", () => {
 		const { container } = render(<SearchBar query="" onQueryChange={vi.fn()} />);
-		expect(container.querySelector(".heading-explorer-search")).not.toBeNull();
+		expect(container.querySelector(".w-full.mb-2")).not.toBeNull();
 	});
 });

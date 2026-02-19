@@ -30,7 +30,7 @@ export function HeadingItem({ heading, filePath }: HeadingItemProps): React.Reac
 		setIsDragging(false);
 	}, []);
 
-	const className = `heading-explorer-heading${isDragging ? " is-dragging" : ""}`;
+	const className = `px-2 py-0.5 cursor-grab rounded truncate hover:bg-ob-hover ${isDragging ? "opacity-50" : ""}`;
 
 	return (
 		<div

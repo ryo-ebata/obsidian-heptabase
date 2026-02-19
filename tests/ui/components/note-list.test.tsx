@@ -47,8 +47,10 @@ describe("NoteList", () => {
 		expect(screen.getByText("No notes found.")).toBeDefined();
 	});
 
-	it("applies heading-explorer-empty class when empty", () => {
+	it("applies muted text styling when empty", () => {
 		const { container } = render(<NoteList results={[]} />);
-		expect(container.querySelector(".heading-explorer-empty")).not.toBeNull();
+		const empty = container.querySelector(".text-ob-muted");
+		expect(empty).not.toBeNull();
+		expect(empty?.classList.contains("text-center")).toBe(true);
 	});
 });

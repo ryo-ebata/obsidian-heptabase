@@ -1,5 +1,5 @@
 import { CanvasOperator } from "@/services/canvas-operator";
-import type { Canvas, CanvasData } from "@/types/obsidian-canvas";
+import type { Canvas, CanvasData, CanvasNode } from "@/types/obsidian-canvas";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import { App, TFile } from "obsidian";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -206,6 +206,187 @@ describe("CanvasOperator", () => {
 			const modifyCall = vi.mocked(app.vault.modify).mock.calls[0];
 			const rawJson = modifyCall[1] as string;
 			expect(rawJson).toContain("\t");
+		});
+	});
+
+	describe("addEdgeToCanvas", () => {
+		it("adds an edge via JSON manipulation", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+
+			operator.addEdgeToCanvas(canvas, {
+				fromNode: "node-a",
+				toNode: "node-b",
+			});
+
+			expect(canvas.setData).toHaveBeenCalled();
+			expect(canvas.requestSave).toHaveBeenCalled();
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(setDataCall.edges).toHaveLength(1);
+
+			const edge = setDataCall.edges[0];
+			expect(edge.fromNode).toBe("node-a");
+			expect(edge.toNode).toBe("node-b");
+			expect(edge.fromSide).toBe("right");
+			expect(edge.toSide).toBe("left");
+			expect(edge.toEnd).toBe("arrow");
+			expect(edge.id).toMatch(/^[0-9a-f]{16}$/);
+		});
+
+		it("applies custom color and label", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+
+			operator.addEdgeToCanvas(canvas, {
+				fromNode: "node-a",
+				toNode: "node-b",
+				color: "1",
+				label: "relates to",
+			});
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			const edge = setDataCall.edges[0];
+			expect(edge.color).toBe("1");
+			expect(edge.label).toBe("relates to");
+		});
+
+		it("preserves existing edges", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [],
+				edges: [
+					{
+						id: "existing-edge",
+						fromNode: "a",
+						fromSide: "right",
+						toNode: "b",
+						toSide: "left",
+					},
+				],
+			});
+
+			operator.addEdgeToCanvas(canvas, {
+				fromNode: "c",
+				toNode: "d",
+			});
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(setDataCall.edges).toHaveLength(2);
+			expect(setDataCall.edges[0].id).toBe("existing-edge");
+		});
+	});
+
+	describe("addEdgeViaJson", () => {
+		it("reads JSON, adds edge, and writes back", async () => {
+			const canvasFile = new TFile("canvas/test.canvas");
+			const emptyData = { nodes: [], edges: [] };
+			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify(emptyData));
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addEdgeViaJson(canvasFile, {
+				fromNode: "node-1",
+				toNode: "node-2",
+			});
+
+			expect(app.vault.read).toHaveBeenCalledWith(canvasFile);
+			expect(app.vault.modify).toHaveBeenCalled();
+
+			const modifyCall = vi.mocked(app.vault.modify).mock.calls[0];
+			const savedData = JSON.parse(modifyCall[1] as string);
+			expect(savedData.edges).toHaveLength(1);
+			expect(savedData.edges[0].fromNode).toBe("node-1");
+			expect(savedData.edges[0].toNode).toBe("node-2");
+			expect(savedData.edges[0].toEnd).toBe("arrow");
+		});
+	});
+
+	describe("addGroupToCanvas", () => {
+		const GROUP_PADDING = 20;
+
+		it("adds a group node encompassing the selected nodes", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+
+			const nodes: CanvasNode[] = [
+				{ id: "a", x: 0, y: 0, width: 400, height: 300 },
+				{ id: "b", x: 500, y: 100, width: 400, height: 300 },
+			];
+
+			operator.addGroupToCanvas(canvas, nodes);
+
+			expect(canvas.setData).toHaveBeenCalled();
+			expect(canvas.requestSave).toHaveBeenCalled();
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(setDataCall.nodes).toHaveLength(1);
+
+			const group = setDataCall.nodes[0];
+			expect(group.type).toBe("group");
+			expect(group.x).toBe(0 - GROUP_PADDING);
+			expect(group.y).toBe(0 - GROUP_PADDING);
+			expect(group.width).toBe(900 + GROUP_PADDING * 2);
+			expect(group.height).toBe(400 + GROUP_PADDING * 2);
+			expect(group.id).toMatch(/^[0-9a-f]{16}$/);
+		});
+
+		it("adds a group with a label", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+
+			const nodes: CanvasNode[] = [
+				{ id: "a", x: 100, y: 100, width: 200, height: 200 },
+			];
+
+			operator.addGroupToCanvas(canvas, nodes, "My Section");
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			const group = setDataCall.nodes[0];
+			expect(group.label).toBe("My Section");
+		});
+
+		it("does nothing when no nodes are provided", () => {
+			const canvas = createMockCanvas();
+
+			operator.addGroupToCanvas(canvas, []);
+
+			expect(canvas.setData).not.toHaveBeenCalled();
+		});
+
+		it("handles single node correctly", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+
+			const nodes: CanvasNode[] = [
+				{ id: "a", x: 50, y: 75, width: 400, height: 300 },
+			];
+
+			operator.addGroupToCanvas(canvas, nodes);
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			const group = setDataCall.nodes[0];
+			expect(group.x).toBe(50 - GROUP_PADDING);
+			expect(group.y).toBe(75 - GROUP_PADDING);
+			expect(group.width).toBe(400 + GROUP_PADDING * 2);
+			expect(group.height).toBe(300 + GROUP_PADDING * 2);
+		});
+
+		it("preserves existing nodes", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [{ id: "existing", type: "text", text: "hi", x: 0, y: 0, width: 100, height: 50 }],
+				edges: [],
+			});
+
+			const nodes: CanvasNode[] = [
+				{ id: "a", x: 0, y: 0, width: 200, height: 200 },
+			];
+
+			operator.addGroupToCanvas(canvas, nodes);
+
+			const setDataCall = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(setDataCall.nodes).toHaveLength(2);
+			expect(setDataCall.nodes[0].id).toBe("existing");
 		});
 	});
 

@@ -1,5 +1,5 @@
 import type { HeptabaseSettings } from "@/types/settings";
-import { HeadingExplorer } from "@/ui/components/heading-explorer";
+import { SidebarContainer } from "@/ui/components/sidebar-container";
 import type { PluginContextValue } from "@/ui/context";
 import { PluginContext } from "@/ui/context";
 import type { App } from "obsidian";
@@ -46,7 +46,7 @@ export class HeadingExplorerView extends ItemView {
 			React.createElement(
 				PluginContext.Provider,
 				{ value: contextValue },
-				React.createElement(HeadingExplorer),
+				React.createElement(SidebarContainer),
 			),
 		);
 	}

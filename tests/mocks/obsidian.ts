@@ -61,11 +61,16 @@ export class Workspace {
 	getActiveViewOfType = vi.fn().mockReturnValue(null);
 	getLeavesOfType = vi.fn().mockReturnValue([]);
 	on = vi.fn();
+	offref = vi.fn();
 	detachLeavesOfType = vi.fn();
 	getRightLeaf = vi.fn().mockReturnValue({
 		setViewState: vi.fn().mockResolvedValue(undefined),
 	});
 	revealLeaf = vi.fn();
+}
+
+export class MarkdownView {
+	file: TFile | null = null;
 }
 
 export class MetadataCache {
@@ -99,6 +104,7 @@ export abstract class Plugin {
 	loadData = vi.fn().mockResolvedValue(null);
 	saveData = vi.fn().mockResolvedValue(undefined);
 	addRibbonIcon = vi.fn();
+	addCommand = vi.fn();
 	registerView = vi.fn();
 	addSettingTab = vi.fn();
 	registerDomEvent = vi.fn();

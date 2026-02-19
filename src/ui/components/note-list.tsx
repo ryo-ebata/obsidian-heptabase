@@ -8,11 +8,11 @@ interface NoteListProps {
 
 export function NoteList({ results }: NoteListProps): React.ReactElement {
 	if (results.length === 0) {
-		return <div className="heading-explorer-empty">No notes found.</div>;
+		return <div className="text-ob-muted text-center p-5 text-ob-ui-small">No notes found.</div>;
 	}
 
 	return (
-		<div className="heading-explorer-notes">
+		<div className="flex flex-col">
 			{results.map((result) => (
 				<NoteItem key={result.file.path} file={result.file} headings={result.headings} />
 			))}

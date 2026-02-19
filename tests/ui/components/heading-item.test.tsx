@@ -19,21 +19,21 @@ describe("HeadingItem", () => {
 		expect(screen.getByText("Test Heading")).toBeDefined();
 	});
 
-	it("applies heading-explorer-heading class", () => {
+	it("applies cursor-grab class", () => {
 		const { container } = render(<HeadingItem heading={heading} filePath="test.md" />);
-		const item = container.querySelector(".heading-explorer-heading");
+		const item = container.querySelector(".cursor-grab");
 		expect(item).not.toBeNull();
 	});
 
 	it("applies indentation based on heading level", () => {
 		const { container } = render(<HeadingItem heading={heading} filePath="test.md" />);
-		const item = container.querySelector(".heading-explorer-heading") as HTMLElement;
+		const item = container.querySelector(".cursor-grab") as HTMLElement;
 		expect(item.style.paddingLeft).toBe("16px");
 	});
 
 	it("sets HeadingDragData on drag start", () => {
 		render(<HeadingItem heading={heading} filePath="test.md" />);
-		const item = screen.getByText("Test Heading").closest(".heading-explorer-heading");
+		const item = screen.getByText("Test Heading").closest(".cursor-grab");
 
 		const dataTransfer = {
 			setData: (type: string, data: string) => {
@@ -56,23 +56,23 @@ describe("HeadingItem", () => {
 
 	it("has draggable attribute set to true", () => {
 		render(<HeadingItem heading={heading} filePath="test.md" />);
-		const item = screen.getByText("Test Heading").closest(".heading-explorer-heading");
+		const item = screen.getByText("Test Heading").closest(".cursor-grab");
 		expect(item?.getAttribute("draggable")).toBe("true");
 	});
 
-	it("has is-dragging class while dragging", () => {
+	it("applies opacity while dragging", () => {
 		const { container } = render(<HeadingItem heading={heading} filePath="test.md" />);
-		const item = container.querySelector(".heading-explorer-heading");
+		const item = container.querySelector(".cursor-grab");
 
 		expect(item).not.toBeNull();
 		if (item) {
 			fireEvent.dragStart(item, {
 				dataTransfer: { setData: () => {}, effectAllowed: "" },
 			});
-			expect(item.classList.contains("is-dragging")).toBe(true);
+			expect(item.classList.contains("opacity-50")).toBe(true);
 
 			fireEvent.dragEnd(item);
-			expect(item.classList.contains("is-dragging")).toBe(false);
+			expect(item.classList.contains("opacity-50")).toBe(false);
 		}
 	});
 });

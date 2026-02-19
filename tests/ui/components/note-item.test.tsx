@@ -1,4 +1,4 @@
-import type { ParsedHeading } from "@/types/plugin";
+import type { NoteDragData, ParsedHeading } from "@/types/plugin";
 import { NoteItem } from "@/ui/components/note-item";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TFile } from "obsidian";
@@ -55,14 +55,67 @@ describe("NoteItem", () => {
 		expect(screen.queryByText("Section One")).toBeNull();
 	});
 
-	it("applies heading-explorer-note class", () => {
+	it("applies margin-bottom to note container", () => {
 		const { container } = render(<NoteItem file={file} headings={headings} />);
-		expect(container.querySelector(".heading-explorer-note")).not.toBeNull();
+		expect(container.querySelector(".mb-1")).not.toBeNull();
 	});
 
-	it("has is-collapsed class when collapsed", () => {
+	it("has rotate class when collapsed", () => {
 		const { container } = render(<NoteItem file={file} headings={headings} />);
-		const icon = container.querySelector(".collapse-icon");
-		expect(icon?.classList.contains("is-collapsed")).toBe(true);
+		const icon = container.querySelector(".flex.transition-transform");
+		expect(icon?.classList.contains("-rotate-90")).toBe(true);
+	});
+
+	describe("note dragging", () => {
+		it("has draggable attribute on note title", () => {
+			const { container } = render(<NoteItem file={file} headings={headings} />);
+			const title = container.querySelector(".cursor-pointer.rounded");
+			expect(title?.getAttribute("draggable")).toBe("true");
+		});
+
+		it("sets NoteDragData on drag start", () => {
+			const { container } = render(<NoteItem file={file} headings={headings} />);
+			const title = container.querySelector(".cursor-pointer.rounded");
+
+			let capturedData: NoteDragData | null = null;
+			const dataTransfer = {
+				setData: (_type: string, data: string) => {
+					capturedData = JSON.parse(data);
+				},
+				effectAllowed: "",
+			};
+
+			expect(title).not.toBeNull();
+			if (title) {
+				fireEvent.dragStart(title, { dataTransfer });
+			}
+
+			expect(capturedData).not.toBeNull();
+			expect(capturedData!.type).toBe("note-drag");
+			expect(capturedData!.filePath).toBe("my-note.md");
+		});
+
+		it("applies opacity while dragging", () => {
+			const { container } = render(<NoteItem file={file} headings={headings} />);
+			const title = container.querySelector(".cursor-pointer.rounded");
+
+			expect(title).not.toBeNull();
+			if (title) {
+				fireEvent.dragStart(title, {
+					dataTransfer: { setData: () => {}, effectAllowed: "" },
+				});
+				expect(title.classList.contains("opacity-50")).toBe(true);
+
+				fireEvent.dragEnd(title);
+				expect(title.classList.contains("opacity-50")).toBe(false);
+			}
+		});
+
+		it("still allows click to expand when note has headings", () => {
+			render(<NoteItem file={file} headings={headings} />);
+
+			fireEvent.click(screen.getByText("my-note"));
+			expect(screen.getByText("Section One")).toBeDefined();
+		});
 	});
 });

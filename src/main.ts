@@ -1,9 +1,10 @@
+import { CanvasObserver } from "@/services/canvas-observer";
 import { CanvasOperator } from "@/services/canvas-operator";
 import { ContentExtractor } from "@/services/content-extractor";
 import { FileCreator } from "@/services/file-creator";
 import { SettingTab } from "@/settings/setting-tab";
 import type { CanvasView } from "@/types/obsidian-canvas";
-import type { HeadingDragData } from "@/types/plugin";
+import type { DragData, HeadingDragData, NoteDragData } from "@/types/plugin";
 import { DEFAULT_SETTINGS, type HeptabaseSettings } from "@/types/settings";
 import { HeadingExplorerView, VIEW_TYPE_HEADING_EXPLORER } from "@/views/heading-explorer-view";
 import { Notice, Plugin, TFile, type WorkspaceLeaf } from "obsidian";
@@ -13,12 +14,14 @@ export default class HeptabasePlugin extends Plugin {
 	private contentExtractor = new ContentExtractor();
 	private fileCreator!: FileCreator;
 	private canvasOperator!: CanvasOperator;
+	private canvasObserver!: CanvasObserver;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
 		this.fileCreator = new FileCreator(this.app, this.settings);
 		this.canvasOperator = new CanvasOperator(this.app, this.settings);
+		this.canvasObserver = new CanvasObserver(this.app);
 
 		this.registerView(VIEW_TYPE_HEADING_EXPLORER, (leaf: WorkspaceLeaf) => {
 			return new HeadingExplorerView(leaf, this.app, this.settings);
@@ -39,6 +42,22 @@ export default class HeptabasePlugin extends Plugin {
 
 		this.registerDomEvent(document, "drop", (evt: DragEvent) => {
 			this.handleCanvasDrop(evt);
+		});
+
+		this.addCommand({
+			id: "connect-selected-nodes",
+			name: "Connect selected nodes",
+			callback: () => {
+				this.connectSelectedNodes();
+			},
+		});
+
+		this.addCommand({
+			id: "group-selected-nodes",
+			name: "Group selected nodes",
+			callback: () => {
+				this.groupSelectedNodes();
+			},
 		});
 	}
 
@@ -69,24 +88,51 @@ export default class HeptabasePlugin extends Plugin {
 			return;
 		}
 
-		let dragData: HeadingDragData;
+		let dragData: DragData;
 		try {
 			dragData = JSON.parse(data);
 		} catch {
 			return;
 		}
 
-		if (dragData.type !== "heading-explorer-drag") {
+		if (dragData.type === "note-drag") {
+			await this.handleNoteDrop(evt, dragData);
+		} else if (dragData.type === "heading-explorer-drag") {
+			await this.handleHeadingDrop(evt, dragData);
+		}
+	}
+
+	private async handleNoteDrop(evt: DragEvent, dragData: NoteDragData): Promise<void> {
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
 			return;
 		}
 
-		const canvasLeaves = this.app.workspace.getLeavesOfType("canvas");
-		if (canvasLeaves.length === 0) {
-			return;
-		}
+		try {
+			const file = this.app.vault.getAbstractFileByPath(dragData.filePath);
+			if (!(file instanceof TFile)) {
+				new Notice("Source file not found");
+				return;
+			}
 
-		const canvasView = canvasLeaves[0].view as unknown as CanvasView;
-		if (!canvasView?.canvas) {
+			const dropX = evt.clientX ?? 0;
+			const dropY = evt.clientY ?? 0;
+
+			this.canvasOperator.addNodeToCanvas(canvasView.canvas, file, {
+				x: dropX,
+				y: dropY,
+			});
+
+			new Notice(`Added "${file.basename}" to Canvas`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			new Notice(`Failed to add note: ${message}`);
+		}
+	}
+
+	private async handleHeadingDrop(evt: DragEvent, dragData: HeadingDragData): Promise<void> {
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
 			return;
 		}
 
@@ -123,6 +169,58 @@ export default class HeptabasePlugin extends Plugin {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			new Notice(`Failed to create node: ${message}`);
 		}
+	}
+
+	private groupSelectedNodes(): void {
+		const selectedNodes = this.canvasObserver.getSelectedNodes();
+		if (selectedNodes.length === 0) {
+			new Notice("Select at least 1 node to group");
+			return;
+		}
+
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
+			return;
+		}
+
+		this.canvasOperator.addGroupToCanvas(canvasView.canvas, selectedNodes);
+		new Notice("Grouped selected nodes");
+	}
+
+	private connectSelectedNodes(): void {
+		const selectedNodes = this.canvasObserver.getSelectedNodes();
+		if (selectedNodes.length !== 2) {
+			new Notice("Select exactly 2 nodes to connect");
+			return;
+		}
+
+		const canvasView = this.getActiveCanvasView();
+		if (!canvasView) {
+			return;
+		}
+
+		this.canvasOperator.addEdgeToCanvas(canvasView.canvas, {
+			fromNode: selectedNodes[0].id,
+			toNode: selectedNodes[1].id,
+			color: this.settings.defaultEdgeColor || undefined,
+			label: this.settings.defaultEdgeLabel || undefined,
+		});
+
+		new Notice("Connected selected nodes");
+	}
+
+	private getActiveCanvasView(): CanvasView | null {
+		const canvasLeaves = this.app.workspace.getLeavesOfType("canvas");
+		if (canvasLeaves.length === 0) {
+			return null;
+		}
+
+		const canvasView = canvasLeaves[0].view as unknown as CanvasView;
+		if (!canvasView?.canvas) {
+			return null;
+		}
+
+		return canvasView;
 	}
 
 	private async loadSettings(): Promise<void> {

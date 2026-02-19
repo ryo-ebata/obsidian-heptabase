@@ -8,6 +8,22 @@ export interface HeadingDragData {
 	headingLine: number;
 }
 
+export interface NoteDragData {
+	type: "note-drag";
+	filePath: string;
+}
+
+export type DragData = HeadingDragData | NoteDragData;
+
+export type SidebarTab = "card-library" | "toc" | "canvas-info";
+
+export interface EdgeOptions {
+	fromNode: string;
+	toNode: string;
+	color?: string;
+	label?: string;
+}
+
 export interface ParsedHeading {
 	heading: string;
 	level: number;

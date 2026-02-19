@@ -7,7 +7,7 @@ export function HeadingExplorer(): React.ReactElement {
 	const { query, results, setQuery } = useNoteSearch();
 
 	return (
-		<div className="heading-explorer-container">
+		<div className="p-2 h-full overflow-y-auto">
 			<SearchBar query={query} onQueryChange={setQuery} />
 			<NoteList results={results} />
 		</div>

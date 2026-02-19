@@ -6,6 +6,7 @@ export interface CanvasNodeData {
 	file?: string;
 	text?: string;
 	url?: string;
+	label?: string;
 	x: number;
 	y: number;
 	width: number;
@@ -14,12 +15,16 @@ export interface CanvasNodeData {
 	subpath?: string;
 }
 
+export type CanvasEdgeEnd = "none" | "arrow";
+
 export interface CanvasEdgeData {
 	id: string;
 	fromNode: string;
 	fromSide: "top" | "right" | "bottom" | "left";
+	fromEnd?: CanvasEdgeEnd;
 	toNode: string;
 	toSide: "top" | "right" | "bottom" | "left";
+	toEnd?: CanvasEdgeEnd;
 	color?: string;
 	label?: string;
 }
@@ -44,6 +49,7 @@ export interface Canvas {
 		size?: { width: number; height: number };
 		save?: boolean;
 	}): CanvasNode;
+	selection?: Set<CanvasNode>;
 }
 
 export interface CanvasNode {

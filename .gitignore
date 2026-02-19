@@ -1,6 +1,8 @@
 node_modules/
 dist/
 main.js
+styles.css
 data.json
 .DS_Store
 *.js.map
+.claude/

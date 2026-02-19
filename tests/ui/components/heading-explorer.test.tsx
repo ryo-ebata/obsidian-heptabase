@@ -32,8 +32,8 @@ describe("HeadingExplorer", () => {
 		expect(screen.getByPlaceholderText("Search notes...")).toBeDefined();
 	});
 
-	it("renders a root container with heading-explorer-container class", () => {
+	it("renders a root container with panel layout classes", () => {
 		const { container } = renderWithContext();
-		expect(container.querySelector(".heading-explorer-container")).not.toBeNull();
+		expect(container.querySelector(".p-2.h-full.overflow-y-auto")).not.toBeNull();
 	});
 });

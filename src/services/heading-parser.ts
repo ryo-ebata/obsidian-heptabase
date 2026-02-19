@@ -8,15 +8,6 @@ export class HeadingParser {
 		this.app = app;
 	}
 
-	searchNotes(query: string): TFile[] {
-		const files = this.app.vault.getMarkdownFiles();
-		if (query === "") {
-			return files;
-		}
-		const lowerQuery = query.toLowerCase();
-		return files.filter((file: TFile) => file.basename.toLowerCase().includes(lowerQuery));
-	}
-
 	getHeadings(file: TFile): ParsedHeading[] {
 		const cache: CachedMetadata | null = this.app.metadataCache.getFileCache(file);
 		if (!cache?.headings) {
@@ -29,13 +20,39 @@ export class HeadingParser {
 		}));
 	}
 
-	searchNotesWithHeadings(query: string): SearchResult[] {
-		return this.searchNotes(query).reduce<SearchResult[]>((results, file) => {
-			const headings = this.getHeadings(file);
-			if (headings.length > 0) {
-				results.push({ file, headings });
-			}
-			return results;
-		}, []);
+	async search(query: string): Promise<SearchResult[]> {
+		const files = this.app.vault.getMarkdownFiles();
+
+		if (query === "") {
+			return files.map((file: TFile) => ({
+				file,
+				headings: this.getHeadings(file),
+			}));
+		}
+
+		const lowerQuery = query.toLowerCase();
+
+		const matched = await Promise.all(
+			files.map(async (file: TFile): Promise<SearchResult | null> => {
+				const headings = this.getHeadings(file);
+
+				if (file.basename.toLowerCase().includes(lowerQuery)) {
+					return { file, headings };
+				}
+
+				if (headings.some((h) => h.heading.toLowerCase().includes(lowerQuery))) {
+					return { file, headings };
+				}
+
+				const content = await this.app.vault.read(file);
+				if (content.toLowerCase().includes(lowerQuery)) {
+					return { file, headings };
+				}
+
+				return null;
+			}),
+		);
+
+		return matched.filter((r): r is SearchResult => r !== null);
 	}
 }
