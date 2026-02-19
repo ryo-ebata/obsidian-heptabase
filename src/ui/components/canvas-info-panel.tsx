@@ -1,9 +1,7 @@
-import { CanvasObserver } from "@/services/canvas-observer";
 import type { CanvasEdgeData } from "@/types/obsidian-canvas";
 import { useCanvasSelection } from "@/ui/hooks/use-canvas-selection";
-import { useApp } from "@/ui/hooks/use-app";
+import { useCanvasView } from "@/ui/hooks/use-canvas-view";
 import type React from "react";
-import { useMemo } from "react";
 
 export function CanvasInfoPanel(): React.ReactElement {
 	const selectedNodes = useCanvasSelection();
@@ -27,10 +25,7 @@ export function CanvasInfoPanel(): React.ReactElement {
 }
 
 function NodeConnections({ nodeId }: { nodeId: string }): React.ReactElement | null {
-	const { app } = useApp();
-	const observer = useMemo(() => new CanvasObserver(app), [app]);
-
-	const canvasView = observer.getActiveCanvasView();
+	const canvasView = useCanvasView();
 	if (!canvasView) {
 		return null;
 	}

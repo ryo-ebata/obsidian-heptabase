@@ -1,20 +1,9 @@
-import { DEFAULT_SETTINGS } from "@/types/settings";
 import { SidebarContainer } from "@/ui/components/sidebar-container";
-import { PluginContext, type PluginContextValue } from "@/ui/context";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { App } from "obsidian";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-function createWrapper(app: App) {
-	const contextValue: PluginContextValue = {
-		app,
-		settings: DEFAULT_SETTINGS,
-	};
-	return function Wrapper({ children }: { children: React.ReactNode }) {
-		return React.createElement(PluginContext.Provider, { value: contextValue }, children);
-	};
-}
+import { createWrapper } from "../../helpers/create-wrapper";
 
 describe("SidebarContainer", () => {
 	let app: App;

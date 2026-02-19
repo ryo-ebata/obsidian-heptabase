@@ -9,6 +9,11 @@ export interface HeptabaseSettings {
 	enableEdgeSync: boolean;
 	connectionsSectionName: string;
 	quickCardDefaultTitle: string;
+	recursiveDecomposition: boolean;
+	showPreviewBeforeCreate: boolean;
+	multiDropLayout: "grid" | "horizontal" | "vertical";
+	multiDropColumns: number;
+	multiDropGap: number;
 }
 
 export const DEFAULT_SETTINGS: HeptabaseSettings = {
@@ -22,4 +27,9 @@ export const DEFAULT_SETTINGS: HeptabaseSettings = {
 	enableEdgeSync: true,
 	connectionsSectionName: "Connections",
 	quickCardDefaultTitle: "Untitled",
+	recursiveDecomposition: false,
+	showPreviewBeforeCreate: false,
+	multiDropLayout: "grid",
+	multiDropColumns: 3,
+	multiDropGap: 40,
 };

@@ -1,27 +1,8 @@
-import type { PluginContextValue } from "@/ui/context";
-import { PluginContext } from "@/ui/context";
 import { useHeadings } from "@/ui/hooks/use-headings";
 import { renderHook } from "@testing-library/react";
 import { App, TFile } from "obsidian";
-import type { ReactNode } from "react";
-import React from "react";
 import { describe, expect, it, vi } from "vitest";
-
-function createWrapper(app?: App) {
-	const mockApp = app ?? new App();
-	const contextValue: PluginContextValue = {
-		app: mockApp as never,
-		settings: {
-			extractedFilesFolder: "",
-			defaultNodeWidth: 400,
-			defaultNodeHeight: 300,
-			fileNamePrefix: "",
-			leaveBacklink: false,
-		},
-	};
-	return ({ children }: { children: ReactNode }) =>
-		React.createElement(PluginContext.Provider, { value: contextValue }, children);
-}
+import { createWrapper } from "../../helpers/create-wrapper";
 
 describe("useHeadings", () => {
 	it("returns headings for the specified file", () => {

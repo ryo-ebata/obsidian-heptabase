@@ -1,20 +1,9 @@
-import { DEFAULT_SETTINGS } from "@/types/settings";
 import { CanvasInfoPanel } from "@/ui/components/canvas-info-panel";
-import { PluginContext, type PluginContextValue } from "@/ui/context";
 import { render, screen } from "@testing-library/react";
 import { App, TFile } from "obsidian";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-function createWrapper(app: App) {
-	const contextValue: PluginContextValue = {
-		app,
-		settings: DEFAULT_SETTINGS,
-	};
-	return function Wrapper({ children }: { children: React.ReactNode }) {
-		return React.createElement(PluginContext.Provider, { value: contextValue }, children);
-	};
-}
+import { createWrapper } from "../../helpers/create-wrapper";
 
 describe("CanvasInfoPanel", () => {
 	let app: App;

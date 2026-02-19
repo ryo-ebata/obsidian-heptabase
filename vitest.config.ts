@@ -18,7 +18,12 @@ export default defineConfig({
 					name: "node",
 					environment: "node",
 					include: ["tests/**/*.test.{ts,tsx}"],
-					exclude: ["tests/ui/**"],
+					exclude: [
+						"tests/ui/**",
+						"tests/handlers/canvas-event-handler.test.ts",
+						"tests/settings/**",
+						"tests/utils/drop-animation.test.ts",
+					],
 				},
 			},
 			{
@@ -26,7 +31,12 @@ export default defineConfig({
 				test: {
 					name: "jsdom",
 					environment: "jsdom",
-					include: ["tests/ui/**/*.test.{ts,tsx}"],
+					include: [
+						"tests/ui/**/*.test.{ts,tsx}",
+						"tests/handlers/canvas-event-handler.test.ts",
+						"tests/settings/**/*.test.ts",
+						"tests/utils/drop-animation.test.ts",
+					],
 				},
 			},
 		],

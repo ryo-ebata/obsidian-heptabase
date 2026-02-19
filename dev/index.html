@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Obsidian Heptabase - Dev</title>
+		<style>
+			:root {
+				--text-muted: #999;
+				--text-normal: #dcddde;
+				--background-primary: #1e1e1e;
+				--background-secondary: #262626;
+				--background-modifier-border: #444;
+				--background-modifier-hover: rgba(255, 255, 255, 0.08);
+				--interactive-accent: #7f6df2;
+				--font-ui-small: 13px;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+				background-color: var(--background-primary);
+				color: var(--text-normal);
+				display: flex;
+				justify-content: center;
+				padding: 24px;
+				min-height: 100vh;
+			}
+
+			#root {
+				width: 350px;
+				height: calc(100vh - 48px);
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 8px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="./main.tsx"></script>
+	</body>
+</html>

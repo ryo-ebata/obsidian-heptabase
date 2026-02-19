@@ -1,5 +1,6 @@
-import type { NoteDragData, ParsedHeading } from "@/types/plugin";
+import type { HeadingDragData, NoteDragData, ParsedHeading } from "@/types/plugin";
 import { HeadingItem } from "@/ui/components/heading-item";
+import { useDragData } from "@/ui/hooks/use-drag-data";
 import type { TFile } from "obsidian";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -7,11 +8,19 @@ import { useCallback, useState } from "react";
 interface NoteItemProps {
 	file: TFile;
 	headings: ParsedHeading[];
+	isSelectable?: boolean;
+	isSelected?: (filePath: string, headingLine: number) => boolean;
+	onToggleSelect?: (item: HeadingDragData) => void;
 }
 
-export function NoteItem({ file, headings }: NoteItemProps): React.ReactElement {
+export function NoteItem({
+	file,
+	headings,
+	isSelectable = false,
+	isSelected,
+	onToggleSelect,
+}: NoteItemProps): React.ReactElement {
 	const [expanded, setExpanded] = useState(false);
-	const [isDragging, setIsDragging] = useState(false);
 	const hasHeadings = headings.length > 0;
 
 	const toggleExpanded = useCallback(() => {
@@ -20,22 +29,15 @@ export function NoteItem({ file, headings }: NoteItemProps): React.ReactElement 
 		}
 	}, [hasHeadings]);
 
-	const handleDragStart = useCallback(
-		(e: React.DragEvent) => {
-			const dragData: NoteDragData = {
-				type: "note-drag",
-				filePath: file.path,
-			};
-			e.dataTransfer.setData("application/json", JSON.stringify(dragData));
-			e.dataTransfer.effectAllowed = "copy";
-			setIsDragging(true);
-		},
+	const getDragData = useCallback(
+		(): NoteDragData => ({
+			type: "note-drag",
+			filePath: file.path,
+		}),
 		[file.path],
 	);
 
-	const handleDragEnd = useCallback(() => {
-		setIsDragging(false);
-	}, []);
+	const { isDragging, handleDragStart, handleDragEnd } = useDragData(getDragData);
 
 	const titleClassName = `flex items-center gap-1 px-2 py-1 cursor-pointer rounded font-medium hover:bg-ob-hover ${isDragging ? "opacity-50" : ""}`;
 
@@ -66,7 +68,13 @@ export function NoteItem({ file, headings }: NoteItemProps): React.ReactElement 
 				<ul className="list-none p-0 m-0">
 					{headings.map((heading) => (
 						<li key={`${heading.position.start.line}-${heading.heading}`}>
-							<HeadingItem heading={heading} filePath={file.path} />
+							<HeadingItem
+								heading={heading}
+								filePath={file.path}
+								isSelectable={isSelectable}
+								isSelected={isSelected?.(file.path, heading.position.start.line)}
+								onToggleSelect={onToggleSelect}
+							/>
 						</li>
 					))}
 				</ul>

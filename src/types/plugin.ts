@@ -13,7 +13,12 @@ export interface NoteDragData {
 	filePath: string;
 }
 
-export type DragData = HeadingDragData | NoteDragData;
+export interface MultiHeadingDragData {
+	type: "multi-heading-drag";
+	items: HeadingDragData[];
+}
+
+export type DragData = HeadingDragData | NoteDragData | MultiHeadingDragData;
 
 export type SidebarTab = "card-library" | "toc" | "canvas-info";
 
@@ -36,4 +41,12 @@ export interface ParsedHeading {
 export interface SearchResult {
 	file: TFile;
 	headings: ParsedHeading[];
+}
+
+export interface ExtractedSection {
+	headingText: string;
+	headingLevel: number;
+	headingLine: number;
+	content: string;
+	children: ExtractedSection[];
 }

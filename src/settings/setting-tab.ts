@@ -72,6 +72,24 @@ export class SettingTab extends PluginSettingTab {
 				toggle.setValue(this.settings.leaveBacklink).onChange(this.updateSetting("leaveBacklink")),
 			);
 
+		new Setting(containerEl)
+			.setName("Recursive decomposition")
+			.setDesc("Extract nested headings as a tree structure")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.settings.recursiveDecomposition)
+					.onChange(this.updateSetting("recursiveDecomposition")),
+			);
+
+		new Setting(containerEl)
+			.setName("Show preview before create")
+			.setDesc("Show a preview dialog before creating files from headings")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.settings.showPreviewBeforeCreate)
+					.onChange(this.updateSetting("showPreviewBeforeCreate")),
+			);
+
 		containerEl.createEl("h2", { text: "Quick Card Settings" });
 
 		new Setting(containerEl)
@@ -103,6 +121,42 @@ export class SettingTab extends PluginSettingTab {
 					.setPlaceholder("e.g. Connections")
 					.setValue(this.settings.connectionsSectionName)
 					.onChange(this.updateSetting("connectionsSectionName")),
+			);
+
+		containerEl.createEl("h2", { text: "Multi-Drop Layout Settings" });
+
+		new Setting(containerEl)
+			.setName("Layout mode")
+			.setDesc("Layout mode for multiple dropped nodes")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("grid", "Grid")
+					.addOption("horizontal", "Horizontal")
+					.addOption("vertical", "Vertical")
+					.setValue(this.settings.multiDropLayout)
+					.onChange(this.updateSetting("multiDropLayout") as (value: string) => void),
+			);
+
+		new Setting(containerEl)
+			.setName("Grid columns")
+			.setDesc("Number of columns in grid layout")
+			.addSlider((slider) =>
+				slider
+					.setLimits(2, 6, 1)
+					.setValue(this.settings.multiDropColumns)
+					.setDynamicTooltip()
+					.onChange(this.updateSetting("multiDropColumns")),
+			);
+
+		new Setting(containerEl)
+			.setName("Drop gap")
+			.setDesc("Gap between dropped nodes (px)")
+			.addSlider((slider) =>
+				slider
+					.setLimits(10, 100, 10)
+					.setValue(this.settings.multiDropGap)
+					.setDynamicTooltip()
+					.onChange(this.updateSetting("multiDropGap")),
 			);
 
 		containerEl.createEl("h2", { text: "Edge Settings" });
