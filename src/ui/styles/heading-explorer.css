@@ -1,0 +1,72 @@
+.heading-explorer-container {
+	padding: 8px;
+	height: 100%;
+	overflow-y: auto;
+}
+
+.heading-explorer-search {
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.heading-explorer-search input {
+	width: 100%;
+	padding: 6px 10px;
+}
+
+.heading-explorer-note {
+	margin-bottom: 4px;
+}
+
+.heading-explorer-note-title {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	cursor: pointer;
+	border-radius: 4px;
+	font-weight: 500;
+}
+
+.heading-explorer-note-title:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.heading-explorer-note-title .collapse-icon {
+	display: flex;
+	transition: transform 100ms ease;
+}
+
+.heading-explorer-note-title .collapse-icon.is-collapsed {
+	transform: rotate(-90deg);
+}
+
+.heading-explorer-headings {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.heading-explorer-heading {
+	padding: 2px 8px;
+	cursor: grab;
+	border-radius: 4px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.heading-explorer-heading:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.heading-explorer-heading.is-dragging {
+	opacity: 0.5;
+}
+
+.heading-explorer-empty {
+	color: var(--text-muted);
+	text-align: center;
+	padding: 20px;
+	font-size: var(--font-ui-small);
+}

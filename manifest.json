@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-heptabase",
+  "name": "Heptabase-like Heading Explorer",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Explore headings in your vault and drag them onto Canvas to create new notes",
+  "author": "ebataryou",
+  "isDesktopOnly": false
+}
