@@ -22,13 +22,5 @@ describe("DragData types", () => {
 			expect(parsed.type).toBe("note-drag");
 			expect(parsed.filePath).toBe("notes/sample.md");
 		});
-
-		it("can distinguish NoteDragData from HeadingDragData by type", () => {
-			const noteDrag = JSON.parse(JSON.stringify({ type: "note-drag", filePath: "test.md" }));
-			const headingDrag = JSON.parse(
-				JSON.stringify({ type: "heading-explorer-drag", filePath: "test.md" }),
-			);
-			expect(noteDrag.type).not.toBe(headingDrag.type);
-		});
 	});
 });

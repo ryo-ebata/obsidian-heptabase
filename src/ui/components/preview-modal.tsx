@@ -27,7 +27,7 @@ export function PreviewModal({
 				<div className="flex flex-col gap-3">
 					{sections.map((section, index) => (
 						<div
-							key={`${section.item.filePath}:${section.item.headingLine}`}
+							key={`${section.item.filePath}:${section.item.title}`}
 							className={`border border-ob-border rounded p-3 ${section.included ? "" : "opacity-50"}`}
 						>
 							<label className="flex items-center gap-2 font-medium mb-1 cursor-pointer">
@@ -36,10 +36,10 @@ export function PreviewModal({
 									checked={section.included}
 									onChange={() => onToggleSection(index)}
 								/>
-								{section.item.headingText}
+								{section.item.title}
 							</label>
 							<pre className="text-ob-ui-small text-ob-muted whitespace-pre-wrap m-0">
-								{section.content.split("\n").slice(2).join("\n").trim()}
+								{section.content}
 							</pre>
 						</div>
 					))}

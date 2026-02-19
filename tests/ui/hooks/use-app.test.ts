@@ -40,7 +40,11 @@ describe("useApp", () => {
 				defaultNodeWidth: 400,
 				defaultNodeHeight: 300,
 				fileNamePrefix: "",
-				leaveBacklink: false,
+				defaultEdgeColor: "",
+				defaultEdgeLabel: "",
+				enableEdgeSync: true,
+				quickCardDefaultTitle: "Untitled",
+				showPreviewBeforeCreate: false,
 			},
 		};
 		const wrapper = ({ children }: { children: ReactNode }) =>

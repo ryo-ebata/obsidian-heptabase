@@ -7,24 +7,18 @@ import { describe, expect, it, vi } from "vitest";
 const sampleSections: PreviewSection[] = [
 	{
 		item: {
-			type: "heading-explorer-drag",
+			title: "Section A",
 			filePath: "notes/a.md",
-			headingText: "Section A",
-			headingLevel: 2,
-			headingLine: 5,
 		},
-		content: "## Section A\n\nContent A.",
+		content: "Content A.",
 		included: true,
 	},
 	{
 		item: {
-			type: "heading-explorer-drag",
+			title: "Section B",
 			filePath: "notes/b.md",
-			headingText: "Section B",
-			headingLevel: 2,
-			headingLine: 10,
 		},
-		content: "## Section B\n\nContent B.",
+		content: "Content B.",
 		included: false,
 	},
 ];
@@ -43,7 +37,7 @@ describe("PreviewModal", () => {
 		expect(container.innerHTML).toBe("");
 	});
 
-	it("renders section headings when open", () => {
+	it("renders section titles when open", () => {
 		render(
 			<PreviewModal
 				isOpen={true}

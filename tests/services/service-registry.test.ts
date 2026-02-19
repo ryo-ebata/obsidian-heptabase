@@ -1,7 +1,6 @@
 import { BacklinkWriter } from "@/services/backlink-writer";
 import { CanvasObserver } from "@/services/canvas-observer";
 import { CanvasOperator } from "@/services/canvas-operator";
-import { ContentExtractor } from "@/services/content-extractor";
 import { EdgeSync } from "@/services/edge-sync";
 import { FileCreator } from "@/services/file-creator";
 import { QuickCardCreator } from "@/services/quick-card-creator";
@@ -15,7 +14,6 @@ describe("createServices", () => {
 		const app = new App();
 		const services = createServices(app, DEFAULT_SETTINGS);
 
-		expect(services.contentExtractor).toBeInstanceOf(ContentExtractor);
 		expect(services.fileCreator).toBeInstanceOf(FileCreator);
 		expect(services.canvasOperator).toBeInstanceOf(CanvasOperator);
 		expect(services.canvasObserver).toBeInstanceOf(CanvasObserver);

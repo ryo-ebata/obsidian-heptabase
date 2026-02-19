@@ -1,19 +1,9 @@
-import type { BacklinkWriter } from "@/services/backlink-writer";
 import type { CanvasObserver } from "@/services/canvas-observer";
 import type { CanvasOperator } from "@/services/canvas-operator";
-import type { ContentExtractor } from "@/services/content-extractor";
 import type { FileCreator } from "@/services/file-creator";
-import type { PreviewBridge } from "@/services/preview-bridge";
-import type { Canvas, CanvasNode } from "@/types/obsidian-canvas";
-import type {
-	DragData,
-	HeadingDragData,
-	MultiHeadingDragData,
-	NoteDragData,
-	TextSelectionDragData,
-} from "@/types/plugin";
+import type { PreviewBridge, PreviewItem } from "@/services/preview-bridge";
+import type { DragData, NoteDragData, TextSelectionDragData } from "@/types/plugin";
 import type { HeptabaseSettings } from "@/types/settings";
-import { calculateGridPositions } from "@/utils/grid-layout";
 import { notifyError } from "@/utils/notify-error";
 import { Notice, TFile, type App } from "obsidian";
 
@@ -23,9 +13,7 @@ export class DropHandler {
 		private settings: HeptabaseSettings,
 		private canvasObserver: CanvasObserver,
 		private canvasOperator: CanvasOperator,
-		private contentExtractor: ContentExtractor,
 		private fileCreator: FileCreator,
-		private backlinkWriter: BacklinkWriter,
 		private previewBridge?: PreviewBridge,
 	) {}
 
@@ -44,10 +32,6 @@ export class DropHandler {
 
 		if (dragData.type === "note-drag") {
 			await this.handleNoteDrop(evt, dragData);
-		} else if (dragData.type === "heading-explorer-drag") {
-			await this.handleHeadingDrop(evt, dragData);
-		} else if (dragData.type === "multi-heading-drag") {
-			await this.handleMultiHeadingDrop(evt, dragData);
 		} else if (dragData.type === "text-selection-drag") {
 			await this.handleTextSelectionDrop(evt, dragData);
 		}
@@ -78,231 +62,6 @@ export class DropHandler {
 		}
 	}
 
-	private async handleHeadingDrop(evt: DragEvent, dragData: HeadingDragData): Promise<void> {
-		const canvasView = this.canvasObserver.getActiveCanvasView();
-		if (!canvasView) {
-			return;
-		}
-
-		try {
-			const sourceFile = this.app.vault.getAbstractFileByPath(dragData.filePath);
-			if (!(sourceFile instanceof TFile)) {
-				new Notice("Source file not found");
-				return;
-			}
-
-			const position = canvasView.canvas.posFromEvt(evt);
-
-			if (this.settings.dropMode === "reference") {
-				const subpath = `#${dragData.headingText}`;
-				this.canvasOperator.addNodeToCanvas(canvasView.canvas, sourceFile, position, subpath);
-				new Notice(`Added "${dragData.headingText}" reference to Canvas`);
-				return;
-			}
-
-			const content = await this.app.vault.read(sourceFile);
-			const extracted = this.contentExtractor.extractContentWithHeading(
-				content,
-				dragData.headingLine,
-				dragData.headingLevel,
-			);
-
-			const createNode = async () => {
-				const newFile = await this.fileCreator.createFile(
-					dragData.headingText,
-					extracted,
-					sourceFile,
-				);
-				this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, position);
-				if (this.settings.leaveBacklink) {
-					await this.backlinkWriter.appendLink(
-						sourceFile,
-						dragData.headingLine,
-						dragData.headingLevel,
-						newFile.basename,
-					);
-				}
-				new Notice(`Created "${newFile.basename}" on Canvas`);
-			};
-
-			if (this.settings.showPreviewBeforeCreate && this.previewBridge) {
-				this.previewBridge.requestPreview(
-					[dragData],
-					[extracted],
-					async (selectedIndices: number[]) => {
-						if (selectedIndices.length === 0) {
-							return;
-						}
-						try {
-							await createNode();
-						} catch (error) {
-							notifyError("Failed to create node", error);
-						}
-					},
-					() => {},
-				);
-				return;
-			}
-
-			await createNode();
-		} catch (error) {
-			notifyError("Failed to create node", error);
-		}
-	}
-
-	private async handleMultiHeadingDrop(
-		evt: DragEvent,
-		dragData: MultiHeadingDragData,
-	): Promise<void> {
-		const canvasView = this.canvasObserver.getActiveCanvasView();
-		if (!canvasView) {
-			return;
-		}
-
-		try {
-			const position = canvasView.canvas.posFromEvt(evt);
-			const items = dragData.items;
-
-			if (this.settings.dropMode === "reference") {
-				await this.addMultipleReferences(items, position, canvasView);
-				return;
-			}
-
-			const contents: string[] = [];
-
-			for (const item of items) {
-				const sourceFile = this.app.vault.getAbstractFileByPath(item.filePath);
-				if (!(sourceFile instanceof TFile)) {
-					contents.push("");
-					continue;
-				}
-				const content = await this.app.vault.read(sourceFile);
-				const extracted = this.contentExtractor.extractContentWithHeading(
-					content,
-					item.headingLine,
-					item.headingLevel,
-				);
-				contents.push(extracted);
-			}
-
-			if (this.settings.showPreviewBeforeCreate && this.previewBridge) {
-				this.previewBridge.requestPreview(
-					items,
-					contents,
-					async (selectedIndices: number[]) => {
-						try {
-							await this.createMultipleNodes(
-								items.filter((_, i) => selectedIndices.includes(i)),
-								contents.filter((_, i) => selectedIndices.includes(i)),
-								position,
-								canvasView,
-							);
-						} catch (error) {
-							notifyError("Failed to create nodes", error);
-						}
-					},
-					() => {},
-				);
-				return;
-			}
-
-			await this.createMultipleNodes(items, contents, position, canvasView);
-		} catch (error) {
-			notifyError("Failed to create nodes", error);
-		}
-	}
-
-	private async addMultipleReferences(
-		items: HeadingDragData[],
-		origin: { x: number; y: number },
-		canvasView: { canvas: Canvas },
-	): Promise<void> {
-		const positions = calculateGridPositions(origin, items.length, {
-			layout: this.settings.multiDropLayout,
-			columns: this.settings.multiDropColumns,
-			gap: this.settings.multiDropGap,
-			nodeWidth: this.settings.defaultNodeWidth,
-			nodeHeight: this.settings.defaultNodeHeight,
-		});
-
-		const createdNodes: CanvasNode[] = [];
-
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i]!;
-			const sourceFile = this.app.vault.getAbstractFileByPath(item.filePath);
-			if (!(sourceFile instanceof TFile)) {
-				continue;
-			}
-
-			const subpath = `#${item.headingText}`;
-			const node = this.canvasOperator.addNodeToCanvas(
-				canvasView.canvas,
-				sourceFile,
-				positions[i]!,
-				subpath,
-			);
-
-			if (node) {
-				createdNodes.push(node);
-			}
-		}
-
-		if (createdNodes.length > 1) {
-			this.canvasOperator.addGroupToCanvas(canvasView.canvas, createdNodes);
-		}
-
-		new Notice(`Added ${createdNodes.length} references to Canvas`);
-	}
-
-	private async createMultipleNodes(
-		items: HeadingDragData[],
-		contents: string[],
-		origin: { x: number; y: number },
-		canvasView: { canvas: Canvas },
-	): Promise<void> {
-		const positions = calculateGridPositions(origin, items.length, {
-			layout: this.settings.multiDropLayout,
-			columns: this.settings.multiDropColumns,
-			gap: this.settings.multiDropGap,
-			nodeWidth: this.settings.defaultNodeWidth,
-			nodeHeight: this.settings.defaultNodeHeight,
-		});
-
-		const createdNodes: CanvasNode[] = [];
-
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i]!;
-			const extracted = contents[i]!;
-			const sourceFile = this.app.vault.getAbstractFileByPath(item.filePath);
-			if (!(sourceFile instanceof TFile)) {
-				continue;
-			}
-
-			const newFile = await this.fileCreator.createFile(item.headingText, extracted, sourceFile);
-
-			const node = this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, positions[i]!);
-
-			if (node) {
-				createdNodes.push(node);
-			}
-
-			if (this.settings.leaveBacklink) {
-				await this.backlinkWriter.appendLink(
-					sourceFile,
-					item.headingLine,
-					item.headingLevel,
-					newFile.basename,
-				);
-			}
-		}
-
-		if (createdNodes.length > 1) {
-			this.canvasOperator.addGroupToCanvas(canvasView.canvas, createdNodes);
-		}
-
-		new Notice(`Created ${createdNodes.length} nodes on Canvas`);
-	}
-
 	private async handleTextSelectionDrop(
 		evt: DragEvent,
 		dragData: TextSelectionDragData,
@@ -329,12 +88,9 @@ export class DropHandler {
 			};
 
 			if (this.settings.showPreviewBeforeCreate && this.previewBridge) {
-				const previewItem: HeadingDragData = {
-					type: "heading-explorer-drag",
+				const previewItem: PreviewItem = {
+					title,
 					filePath: dragData.filePath,
-					headingText: title,
-					headingLevel: 0,
-					headingLine: 0,
 				};
 				this.previewBridge.requestPreview(
 					[previewItem],

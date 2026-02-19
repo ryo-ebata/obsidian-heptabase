@@ -1,5 +1,7 @@
-import type { ParsedHeading, SearchResult } from "@/types/plugin";
-import type { App, CachedMetadata, TFile } from "obsidian";
+import type { SearchResult } from "@/types/plugin";
+import type { App, TFile } from "obsidian";
+
+const FRONTMATTER_PATTERN = /^---\n[\s\S]*?\n---\n?/;
 
 export class HeadingParser {
 	private app: App;
@@ -8,45 +10,31 @@ export class HeadingParser {
 		this.app = app;
 	}
 
-	getHeadings(file: TFile): ParsedHeading[] {
-		const cache: CachedMetadata | null = this.app.metadataCache.getFileCache(file);
-		if (!cache?.headings) {
-			return [];
-		}
-		return cache.headings.map((h) => ({
-			heading: h.heading,
-			level: h.level,
-			position: h.position,
-		}));
-	}
-
 	async search(query: string): Promise<SearchResult[]> {
 		const files = this.app.vault.getMarkdownFiles();
 
 		if (query === "") {
-			return files.map((file: TFile) => ({
-				file,
-				headings: this.getHeadings(file),
-			}));
+			const results: SearchResult[] = [];
+			for (const file of files) {
+				const excerpt = await this.getExcerpt(file);
+				results.push({ file, excerpt });
+			}
+			return results;
 		}
 
 		const lowerQuery = query.toLowerCase();
 
 		const matched = await Promise.all(
 			files.map(async (file: TFile): Promise<SearchResult | null> => {
-				const headings = this.getHeadings(file);
-
 				if (file.basename.toLowerCase().includes(lowerQuery)) {
-					return { file, headings };
-				}
-
-				if (headings.some((h) => h.heading.toLowerCase().includes(lowerQuery))) {
-					return { file, headings };
+					const excerpt = await this.getExcerpt(file);
+					return { file, excerpt };
 				}
 
 				const content = await this.app.vault.read(file);
 				if (content.toLowerCase().includes(lowerQuery)) {
-					return { file, headings };
+					const excerpt = this.extractExcerpt(content);
+					return { file, excerpt };
 				}
 
 				return null;
@@ -54,5 +42,16 @@ export class HeadingParser {
 		);
 
 		return matched.filter((r): r is SearchResult => r !== null);
+	}
+
+	private async getExcerpt(file: TFile): Promise<string> {
+		const content = await this.app.vault.cachedRead(file);
+		return this.extractExcerpt(content);
+	}
+
+	private extractExcerpt(content: string): string {
+		const stripped = content.replace(FRONTMATTER_PATTERN, "");
+		const lines = stripped.split("\n").filter((line) => line.trim() !== "");
+		return lines.slice(0, 3).join("\n");
 	}
 }

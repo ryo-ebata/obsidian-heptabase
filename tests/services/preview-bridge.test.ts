@@ -1,15 +1,12 @@
 import { PreviewBridge } from "@/services/preview-bridge";
-import type { HeadingDragData } from "@/types/plugin";
+import type { PreviewItem } from "@/services/preview-bridge";
 import { describe, expect, it, vi } from "vitest";
 
 describe("PreviewBridge", () => {
-	const sampleItems: HeadingDragData[] = [
+	const sampleItems: PreviewItem[] = [
 		{
-			type: "heading-explorer-drag",
+			title: "Section A",
 			filePath: "notes/test.md",
-			headingText: "Section A",
-			headingLevel: 2,
-			headingLine: 5,
 		},
 	];
 

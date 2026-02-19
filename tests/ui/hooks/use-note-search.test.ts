@@ -17,7 +17,7 @@ describe("useNoteSearch", () => {
 		const app = new App();
 		const file = new TFile("notes/hello.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-		(app.metadataCache.getFileCache as Mock).mockReturnValue({});
+		(app.vault.cachedRead as Mock).mockResolvedValue("Some content");
 
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
 
@@ -26,6 +26,7 @@ describe("useNoteSearch", () => {
 		expect(result.current.query).toBe("");
 		expect(result.current.results).toHaveLength(1);
 		expect(result.current.results[0].file).toBe(file);
+		expect(result.current.results[0].excerpt).toBe("Some content");
 	});
 
 	it("updates the search query with setQuery", () => {
@@ -42,7 +43,7 @@ describe("useNoteSearch", () => {
 		const app = new App();
 		const file = new TFile("notes/test.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-		(app.metadataCache.getFileCache as Mock).mockReturnValue({});
+		(app.vault.cachedRead as Mock).mockResolvedValue("content");
 		(app.vault.read as Mock).mockResolvedValue("");
 
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
@@ -67,7 +68,7 @@ describe("useNoteSearch", () => {
 		const app = new App();
 		const file = new TFile("notes/test.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-		(app.metadataCache.getFileCache as Mock).mockReturnValue({});
+		(app.vault.cachedRead as Mock).mockResolvedValue("content");
 		(app.vault.read as Mock).mockResolvedValue("");
 
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });

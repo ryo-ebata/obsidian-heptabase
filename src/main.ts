@@ -95,9 +95,7 @@ export default class HeptabasePlugin extends Plugin {
 			this.settings,
 			this.services.canvasObserver,
 			this.services.canvasOperator,
-			this.services.contentExtractor,
 			this.services.fileCreator,
-			this.services.backlinkWriter,
 			this.services.previewBridge,
 		);
 		this.commandHandler = new CommandHandler(

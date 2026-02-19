@@ -1,22 +1,16 @@
-import type { HeadingDragData } from "@/types/plugin";
+import type { PreviewItem } from "@/services/preview-bridge";
 import { usePreview } from "@/ui/hooks/use-preview";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const sampleItems: HeadingDragData[] = [
+const sampleItems: PreviewItem[] = [
 	{
-		type: "heading-explorer-drag",
+		title: "Section A",
 		filePath: "notes/a.md",
-		headingText: "Section A",
-		headingLevel: 2,
-		headingLine: 5,
 	},
 	{
-		type: "heading-explorer-drag",
+		title: "Section B",
 		filePath: "notes/b.md",
-		headingText: "Section B",
-		headingLevel: 2,
-		headingLine: 10,
 	},
 ];
 
@@ -100,14 +94,11 @@ describe("usePreview", () => {
 	it("uses empty string fallback when contents array is shorter than items", () => {
 		const { result } = renderHook(() => usePreview());
 
-		const threeItems: HeadingDragData[] = [
+		const threeItems: PreviewItem[] = [
 			...sampleItems,
 			{
-				type: "heading-explorer-drag",
+				title: "Section C",
 				filePath: "notes/c.md",
-				headingText: "Section C",
-				headingLevel: 2,
-				headingLine: 15,
 			},
 		];
 

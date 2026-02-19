@@ -16,11 +16,11 @@ describe("FileCreator", () => {
 			defaultNodeWidth: 400,
 			defaultNodeHeight: 300,
 			fileNamePrefix: "",
-			leaveBacklink: false,
 			defaultEdgeColor: "",
 			defaultEdgeLabel: "",
 			enableEdgeSync: true,
 			quickCardDefaultTitle: "Untitled",
+			showPreviewBeforeCreate: false,
 		};
 		creator = new FileCreator(app, settings);
 		sourceFile = new TFile("notes/source.md");

@@ -1,7 +1,10 @@
-import type { HeadingDragData } from "@/types/plugin";
+export interface PreviewItem {
+	title: string;
+	filePath: string;
+}
 
 export interface PreviewRequest {
-	items: HeadingDragData[];
+	items: PreviewItem[];
 	contents: string[];
 	onConfirm: (selectedIndices: number[]) => void;
 	onCancel: () => void;
@@ -24,7 +27,7 @@ export class PreviewBridge {
 	}
 
 	requestPreview(
-		items: HeadingDragData[],
+		items: PreviewItem[],
 		contents: string[],
 		onConfirm: (selectedIndices: number[]) => void,
 		onCancel: () => void,

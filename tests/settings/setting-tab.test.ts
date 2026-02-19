@@ -67,13 +67,13 @@ describe("SettingTab", () => {
 			expect(h2Texts).toContain("Heptabase Settings");
 			expect(h2Texts).toContain("Quick Card Settings");
 			expect(h2Texts).toContain("Edge Sync Settings");
-			expect(h2Texts).toContain("Multi-Drop Layout Settings");
 			expect(h2Texts).toContain("Edge Settings");
+			expect(h2Texts).not.toContain("Multi-Drop Layout Settings");
 		});
 
-		it("creates 15 Setting instances", () => {
+		it("creates 9 Setting instances", () => {
 			tab.display();
-			expect(settingInstances).toHaveLength(15);
+			expect(settingInstances).toHaveLength(9);
 		});
 
 		it("calls setName and setDesc on all Settings", () => {
@@ -143,32 +143,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates leaveBacklink (toggle - Setting #4)", () => {
+		it("updates showPreviewBeforeCreate (toggle - Setting #4)", () => {
 			tab.display();
 			const instance = settingInstances[4];
-			expect(instance.addToggle).toHaveBeenCalled();
-			expect(instance.setValue).toHaveBeenCalledWith(DEFAULT_SETTINGS.leaveBacklink);
-
-			const onChange = getOnChangeCallback(instance);
-			onChange(true as never);
-			expect(settings.leaveBacklink).toBe(true);
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates recursiveDecomposition (toggle - Setting #5)", () => {
-			tab.display();
-			const instance = settingInstances[5];
-			expect(instance.addToggle).toHaveBeenCalled();
-
-			const onChange = getOnChangeCallback(instance);
-			onChange(true as never);
-			expect(settings.recursiveDecomposition).toBe(true);
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates showPreviewBeforeCreate (toggle - Setting #6)", () => {
-			tab.display();
-			const instance = settingInstances[6];
 			expect(instance.addToggle).toHaveBeenCalled();
 
 			const onChange = getOnChangeCallback(instance);
@@ -177,23 +154,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates dropMode (dropdown - Setting #7)", () => {
+		it("updates quickCardDefaultTitle (text - Setting #5)", () => {
 			tab.display();
-			const instance = settingInstances[7];
-			expect(instance.addDropdown).toHaveBeenCalled();
-			expect(instance.addOption).toHaveBeenCalledWith("reference", "Reference (subpath)");
-			expect(instance.addOption).toHaveBeenCalledWith("extract", "Extract (create file)");
-			expect(instance.setValue).toHaveBeenCalledWith(DEFAULT_SETTINGS.dropMode);
-
-			const onChange = getOnChangeCallback(instance);
-			onChange("extract" as never);
-			expect(settings.dropMode).toBe("extract");
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates quickCardDefaultTitle (text - Setting #8)", () => {
-			tab.display();
-			const instance = settingInstances[8];
+			const instance = settingInstances[5];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. Untitled");
 
@@ -203,9 +166,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates enableEdgeSync (toggle - Setting #9)", () => {
+		it("updates enableEdgeSync (toggle - Setting #6)", () => {
 			tab.display();
-			const instance = settingInstances[9];
+			const instance = settingInstances[6];
 			expect(instance.addToggle).toHaveBeenCalled();
 
 			const onChange = getOnChangeCallback(instance);
@@ -214,48 +177,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates multiDropLayout (dropdown - Setting #10)", () => {
+		it("updates defaultEdgeColor (text - Setting #7)", () => {
 			tab.display();
-			const instance = settingInstances[10];
-			expect(instance.addDropdown).toHaveBeenCalled();
-			expect(instance.addOption).toHaveBeenCalledWith("grid", "Grid");
-			expect(instance.addOption).toHaveBeenCalledWith("horizontal", "Horizontal");
-			expect(instance.addOption).toHaveBeenCalledWith("vertical", "Vertical");
-			expect(instance.setValue).toHaveBeenCalledWith(DEFAULT_SETTINGS.multiDropLayout);
-
-			const onChange = getOnChangeCallback(instance);
-			onChange("horizontal" as never);
-			expect(settings.multiDropLayout).toBe("horizontal");
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates multiDropColumns (slider - Setting #11)", () => {
-			tab.display();
-			const instance = settingInstances[11];
-			expect(instance.addSlider).toHaveBeenCalled();
-			expect(instance.setLimits).toHaveBeenCalledWith(2, 6, 1);
-
-			const onChange = getOnChangeCallback(instance);
-			onChange(4 as never);
-			expect(settings.multiDropColumns).toBe(4);
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates multiDropGap (slider - Setting #12)", () => {
-			tab.display();
-			const instance = settingInstances[12];
-			expect(instance.addSlider).toHaveBeenCalled();
-			expect(instance.setLimits).toHaveBeenCalledWith(10, 100, 10);
-
-			const onChange = getOnChangeCallback(instance);
-			onChange(60 as never);
-			expect(settings.multiDropGap).toBe(60);
-			expect(onSettingsChange).toHaveBeenCalledWith(settings);
-		});
-
-		it("updates defaultEdgeColor (text - Setting #13)", () => {
-			tab.display();
-			const instance = settingInstances[13];
+			const instance = settingInstances[7];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. 1");
 
@@ -265,9 +189,9 @@ describe("SettingTab", () => {
 			expect(onSettingsChange).toHaveBeenCalledWith(settings);
 		});
 
-		it("updates defaultEdgeLabel (text - Setting #14)", () => {
+		it("updates defaultEdgeLabel (text - Setting #8)", () => {
 			tab.display();
-			const instance = settingInstances[14];
+			const instance = settingInstances[8];
 			expect(instance.addText).toHaveBeenCalled();
 			expect(instance.setPlaceholder).toHaveBeenCalledWith("e.g. relates to");
 

@@ -1,8 +1,8 @@
-import type { HeadingDragData } from "@/types/plugin";
+import type { PreviewItem } from "@/services/preview-bridge";
 import { useCallback, useRef, useState } from "react";
 
 export interface PreviewSection {
-	item: HeadingDragData;
+	item: PreviewItem;
 	content: string;
 	included: boolean;
 }
@@ -11,7 +11,7 @@ export interface UsePreviewReturn {
 	isPreviewOpen: boolean;
 	previewSections: PreviewSection[];
 	openPreview: (
-		items: HeadingDragData[],
+		items: PreviewItem[],
 		contents: string[],
 		onConfirm: (selectedIndices: number[]) => void,
 		onCancel: () => void,
@@ -31,7 +31,7 @@ export function usePreview(): UsePreviewReturn {
 
 	const openPreview = useCallback(
 		(
-			items: HeadingDragData[],
+			items: PreviewItem[],
 			contents: string[],
 			onConfirm: (selectedIndices: number[]) => void,
 			onCancel: () => void,

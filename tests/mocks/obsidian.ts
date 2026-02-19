@@ -49,6 +49,7 @@ export class Vault {
 	getAbstractFileByPath = vi.fn();
 	getMarkdownFiles = vi.fn().mockReturnValue([]);
 	read = vi.fn().mockResolvedValue("");
+	cachedRead = vi.fn().mockResolvedValue("");
 	create = vi.fn().mockResolvedValue(new TFile());
 	modify = vi.fn().mockResolvedValue(undefined);
 	createFolder = vi.fn().mockResolvedValue(undefined);

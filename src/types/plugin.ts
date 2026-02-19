@@ -1,21 +1,8 @@
 import type { TFile } from "obsidian";
 
-export interface HeadingDragData {
-	type: "heading-explorer-drag";
-	filePath: string;
-	headingText: string;
-	headingLevel: number;
-	headingLine: number;
-}
-
 export interface NoteDragData {
 	type: "note-drag";
 	filePath: string;
-}
-
-export interface MultiHeadingDragData {
-	type: "multi-heading-drag";
-	items: HeadingDragData[];
 }
 
 export interface TextSelectionDragData {
@@ -25,11 +12,7 @@ export interface TextSelectionDragData {
 	title: string;
 }
 
-export type DragData =
-	| HeadingDragData
-	| NoteDragData
-	| MultiHeadingDragData
-	| TextSelectionDragData;
+export type DragData = NoteDragData | TextSelectionDragData;
 
 export type SidebarTab = "card-library" | "article-viewer";
 
@@ -51,7 +34,7 @@ export interface ParsedHeading {
 
 export interface SearchResult {
 	file: TFile;
-	headings: ParsedHeading[];
+	excerpt: string;
 }
 
 export interface ExtractedSection {
