@@ -150,6 +150,28 @@ describe("useEmbeddableEditor", () => {
 		expect(result.current.editorView).toBeNull();
 	});
 
+	it("calls onEditorViewChange with EditorView on init and null on unmount", () => {
+		const container = document.createElement("div");
+		const onEditorViewChange = vi.fn();
+
+		const { unmount } = renderHook(
+			() =>
+				useEmbeddableEditor({
+					content: "# Hello",
+					onSave: vi.fn(),
+					onEditorViewChange,
+					_containerOverride: container,
+				}),
+			{ wrapper: createWrapper(app) },
+		);
+
+		expect(onEditorViewChange).toHaveBeenCalledWith(mockEditor.cm);
+
+		unmount();
+
+		expect(onEditorViewChange).toHaveBeenCalledWith(null);
+	});
+
 	describe("onChange auto-save", () => {
 		beforeEach(() => {
 			vi.useFakeTimers();

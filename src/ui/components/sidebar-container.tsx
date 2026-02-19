@@ -1,10 +1,13 @@
 import type { SidebarTab } from "@/types/plugin";
-import { ArticleViewerPanel } from "@/ui/components/article-viewer-panel";
+import {
+	ArticleViewerPanel,
+	type ArticleViewerPanelHandle,
+} from "@/ui/components/article-viewer-panel";
 import { HeadingExplorer } from "@/ui/components/heading-explorer";
 import { SidebarTabs } from "@/ui/components/sidebar-tabs";
 import { SidebarActionsContext } from "@/ui/context";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface SidebarContainerProps {
 	children?: React.ReactNode;
@@ -12,7 +15,7 @@ interface SidebarContainerProps {
 
 export function SidebarContainer({ children }: SidebarContainerProps): React.ReactElement {
 	const [activeTab, setActiveTab] = useState<SidebarTab>("card-library");
-	const [pendingArticleFilePath, setPendingArticleFilePath] = useState<string | null>(null);
+	const panelRef = useRef<ArticleViewerPanelHandle>(null);
 
 	const handleTabChange = useCallback((tab: SidebarTab) => {
 		setActiveTab(tab);
@@ -20,11 +23,7 @@ export function SidebarContainer({ children }: SidebarContainerProps): React.Rea
 
 	const openInArticle = useCallback((filePath: string) => {
 		setActiveTab("article-viewer");
-		setPendingArticleFilePath(filePath);
-	}, []);
-
-	const handleFileOpened = useCallback(() => {
-		setPendingArticleFilePath(null);
+		panelRef.current?.selectFile(filePath);
 	}, []);
 
 	return (
@@ -43,10 +42,7 @@ export function SidebarContainer({ children }: SidebarContainerProps): React.Rea
 					className="flex-1 overflow-hidden"
 					style={{ display: activeTab === "article-viewer" ? undefined : "none" }}
 				>
-					<ArticleViewerPanel
-						requestedFilePath={pendingArticleFilePath}
-						onFileOpened={handleFileOpened}
-					/>
+					<ArticleViewerPanel ref={panelRef} />
 				</div>
 				{children}
 			</div>

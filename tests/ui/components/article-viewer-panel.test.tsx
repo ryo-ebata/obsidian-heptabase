@@ -1,5 +1,8 @@
 import type { EmbeddableEditorHandle } from "@/services/embeddable-editor";
-import { ArticleViewerPanel } from "@/ui/components/article-viewer-panel";
+import {
+	ArticleViewerPanel,
+	type ArticleViewerPanelHandle,
+} from "@/ui/components/article-viewer-panel";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { App, TFile, TFolder } from "obsidian";
@@ -196,7 +199,7 @@ describe("ArticleViewerPanel", () => {
 		expect(app.fileManager.renameFile).toHaveBeenCalledWith(file, "notes/new-name.md");
 	});
 
-	it("selects file when requestedFilePath is provided", async () => {
+	it("selects file via ref.selectFile", async () => {
 		const file = new TFile("notes/requested.md");
 		(app.vault.getAbstractFileByPath as Mock).mockReturnValue(file);
 		(app.vault.read as Mock).mockResolvedValue("# Requested");
@@ -209,18 +212,20 @@ describe("ArticleViewerPanel", () => {
 			},
 		});
 
-		const onFileOpened = vi.fn();
-		const { container } = render(
-			<ArticleViewerPanel requestedFilePath="notes/requested.md" onFileOpened={onFileOpened} />,
-			{ wrapper: createWrapper(app) },
-		);
+		const ref = React.createRef<ArticleViewerPanelHandle>();
+		const { container } = render(<ArticleViewerPanel ref={ref} />, {
+			wrapper: createWrapper(app),
+		});
+
+		act(() => {
+			ref.current?.selectFile("notes/requested.md");
+		});
 
 		await act(async () => {
 			await vi.advanceTimersByTimeAsync(0);
 		});
 
 		expect(app.vault.getAbstractFileByPath).toHaveBeenCalledWith("notes/requested.md");
-		expect(onFileOpened).toHaveBeenCalled();
 		expect(container.querySelector(".article-header-title")).not.toBeNull();
 	});
 

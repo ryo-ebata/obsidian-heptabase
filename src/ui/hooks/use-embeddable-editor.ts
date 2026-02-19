@@ -10,6 +10,7 @@ import { useApp } from "./use-app";
 interface UseEmbeddableEditorProps {
 	content: string;
 	onSave: (newContent: string) => void;
+	onEditorViewChange?: (view: EditorView | null) => void;
 	_containerOverride?: HTMLElement;
 }
 
@@ -21,6 +22,7 @@ interface UseEmbeddableEditorReturn {
 export function useEmbeddableEditor({
 	content,
 	onSave,
+	onEditorViewChange,
 	_containerOverride,
 }: UseEmbeddableEditorProps): UseEmbeddableEditorReturn {
 	const { app } = useApp();
@@ -29,6 +31,8 @@ export function useEmbeddableEditor({
 	const [editorView, setEditorView] = useState<EditorView | null>(null);
 	const onSaveRef = useRef(onSave);
 	onSaveRef.current = onSave;
+	const onEditorViewChangeRef = useRef(onEditorViewChange);
+	onEditorViewChangeRef.current = onEditorViewChange;
 	const contentRef = useRef(content);
 	contentRef.current = content;
 	const debounceTimerRef = useRef<number>(0);
@@ -59,12 +63,14 @@ export function useEmbeddableEditor({
 		const editor = createEmbeddableEditor(app, container, options);
 		editorRef.current = editor;
 		setEditorView(editor.cm);
+		onEditorViewChangeRef.current?.(editor.cm);
 
 		return () => {
 			clearTimeout(debounceTimerRef.current);
 			editor.destroy();
 			editorRef.current = null;
 			setEditorView(null);
+			onEditorViewChangeRef.current?.(null);
 		};
 	}, [app, getContainer]);
 

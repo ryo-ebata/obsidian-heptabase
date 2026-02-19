@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 interface UseInfiniteScrollReturn<T> {
 	visibleItems: T[];
@@ -10,9 +10,11 @@ export function useInfiniteScroll<T>(items: T[], pageSize: number): UseInfiniteS
 	const [page, setPage] = useState(1);
 	const observerRef = useRef<IntersectionObserver | null>(null);
 
-	useEffect(() => {
+	const [prevItems, setPrevItems] = useState(items);
+	if (items !== prevItems) {
+		setPrevItems(items);
 		setPage(1);
-	}, [items]);
+	}
 
 	const visibleCount = Math.min(page * pageSize, items.length);
 	const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);

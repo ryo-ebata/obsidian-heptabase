@@ -16,6 +16,7 @@ vi.mock("react", () => ({
 	},
 	createElement: vi.fn(),
 	createContext: vi.fn().mockReturnValue({}),
+	forwardRef: vi.fn((render: unknown) => render),
 }));
 
 describe("HeadingExplorerView", () => {

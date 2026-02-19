@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ArticleHeaderProps {
 	title: string;
@@ -50,9 +50,11 @@ function PropertyRow({
 }): React.ReactElement {
 	const [editValue, setEditValue] = useState(String(value));
 
-	useEffect(() => {
+	const [prevValue, setPrevValue] = useState(value);
+	if (value !== prevValue) {
+		setPrevValue(value);
 		setEditValue(String(value));
-	}, [value]);
+	}
 
 	const handleBlur = () => {
 		if (editValue !== String(value)) {
@@ -139,10 +141,6 @@ export function ArticleHeader({
 }: ArticleHeaderProps): React.ReactElement {
 	const [editTitle, setEditTitle] = useState(title);
 	const [showAddForm, setShowAddForm] = useState(false);
-
-	useEffect(() => {
-		setEditTitle(title);
-	}, [title]);
 
 	const handleTitleBlur = () => {
 		if (editTitle !== title) {

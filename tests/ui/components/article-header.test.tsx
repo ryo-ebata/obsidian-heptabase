@@ -202,12 +202,12 @@ describe("ArticleHeader", () => {
 		expect(prop).not.toBeNull();
 	});
 
-	it("updates title when props change", () => {
+	it("updates title when remounted with key", () => {
 		const { rerender, props } = renderHeader({ title: "First" });
 
 		expect(screen.getByDisplayValue("First")).toBeDefined();
 
-		rerender(<ArticleHeader {...props} title="Second" />);
+		rerender(<ArticleHeader key="second" {...props} title="Second" />);
 
 		expect(screen.getByDisplayValue("Second")).toBeDefined();
 	});
