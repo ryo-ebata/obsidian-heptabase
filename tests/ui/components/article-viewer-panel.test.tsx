@@ -196,6 +196,34 @@ describe("ArticleViewerPanel", () => {
 		expect(app.fileManager.renameFile).toHaveBeenCalledWith(file, "notes/new-name.md");
 	});
 
+	it("selects file when requestedFilePath is provided", async () => {
+		const file = new TFile("notes/requested.md");
+		(app.vault.getAbstractFileByPath as Mock).mockReturnValue(file);
+		(app.vault.read as Mock).mockResolvedValue("# Requested");
+		(app.metadataCache.getFileCache as Mock).mockReturnValue({
+			frontmatter: {
+				position: {
+					start: { line: 0, col: 0, offset: 0 },
+					end: { line: 2, col: 3, offset: 20 },
+				},
+			},
+		});
+
+		const onFileOpened = vi.fn();
+		const { container } = render(
+			<ArticleViewerPanel requestedFilePath="notes/requested.md" onFileOpened={onFileOpened} />,
+			{ wrapper: createWrapper(app) },
+		);
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(0);
+		});
+
+		expect(app.vault.getAbstractFileByPath).toHaveBeenCalledWith("notes/requested.md");
+		expect(onFileOpened).toHaveBeenCalled();
+		expect(container.querySelector(".article-header-title")).not.toBeNull();
+	});
+
 	it("strips frontmatter from content passed to editor", async () => {
 		const file = new TFile("notes/hello.md");
 		const rawContent = "---\nmarp: true\ntheme: default\n---\n# Hello World\n\nBody text.";

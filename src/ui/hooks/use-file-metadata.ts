@@ -1,5 +1,5 @@
 import type { CachedMetadata, TFile } from "obsidian";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { useApp } from "./use-app";
 
 export interface FileMetadata {
@@ -21,10 +21,7 @@ function extractFrontmatter(cache: CachedMetadata | null): Record<string, unknow
 	return rest;
 }
 
-function buildMetadata(file: TFile | null, cache: CachedMetadata | null): FileMetadata | null {
-	if (!file) {
-		return null;
-	}
+function buildMetadata(file: TFile, cache: CachedMetadata | null): FileMetadata {
 	return {
 		title: file.basename,
 		path: file.path,
@@ -34,40 +31,32 @@ function buildMetadata(file: TFile | null, cache: CachedMetadata | null): FileMe
 
 export function useFileMetadata(file: TFile | null): UseFileMetadataReturn {
 	const { app } = useApp();
-	const fileRef = useRef(file);
-	fileRef.current = file;
+	const [revision, bump] = useReducer((n: number) => n + 1, 0);
 
-	const getMetadata = useCallback((): FileMetadata | null => {
-		if (!fileRef.current) {
-			return null;
-		}
-		const cache = app.metadataCache.getFileCache(fileRef.current);
-		return buildMetadata(fileRef.current, cache);
-	}, [app.metadataCache]);
+	const metadata: FileMetadata | null =
+		file === null ? null : buildMetadata(file, app.metadataCache.getFileCache(file));
 
-	const [metadata, setMetadata] = useState<FileMetadata | null>(() => getMetadata());
+	void revision;
 
 	useEffect(() => {
-		setMetadata(getMetadata());
-
 		if (!file) {
 			return;
 		}
 
 		const ref = app.metadataCache.on("changed", (changedFile: TFile) => {
-			if (changedFile === fileRef.current) {
-				setMetadata(getMetadata());
+			if (changedFile.path === file.path) {
+				bump();
 			}
 		});
 
 		return () => {
 			app.metadataCache.offref(ref);
 		};
-	}, [app.metadataCache, file, getMetadata]);
+	}, [app.metadataCache, file]);
 
 	const refresh = useCallback(() => {
-		setMetadata(getMetadata());
-	}, [getMetadata]);
+		bump();
+	}, []);
 
 	return { metadata, refresh };
 }

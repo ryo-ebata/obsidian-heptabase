@@ -170,10 +170,36 @@ export class Component {
 }
 
 export class Notice {
+	static lastInstance: Notice | null = null;
+
 	message: string;
 
 	constructor(message: string) {
 		this.message = message;
+		Notice.lastInstance = this;
+	}
+}
+
+export class MenuItem {
+	setTitle = vi.fn().mockReturnThis();
+	setIcon = vi.fn().mockReturnThis();
+	onClick = vi.fn().mockReturnThis();
+}
+
+export class Menu {
+	static lastInstance: Menu | null = null;
+
+	items: MenuItem[] = [];
+	addItem = vi.fn().mockImplementation((cb: (item: MenuItem) => void) => {
+		const item = new MenuItem();
+		this.items.push(item);
+		cb(item);
+		return this;
+	});
+	showAtMouseEvent = vi.fn();
+
+	constructor() {
+		Menu.lastInstance = this;
 	}
 }
 

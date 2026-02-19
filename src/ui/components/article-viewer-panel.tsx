@@ -7,9 +7,9 @@ import { useEditorSelection } from "@/ui/hooks/use-editor-selection";
 import { useFileContent } from "@/ui/hooks/use-file-content";
 import { useFileMetadata } from "@/ui/hooks/use-file-metadata";
 import type { EditorView } from "@codemirror/view";
-import type { TFile } from "obsidian";
+import { TFile } from "obsidian";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
 
@@ -23,7 +23,15 @@ function extractFrontmatterBlock(content: string): string {
 	return match ? match[0] : "";
 }
 
-export function ArticleViewerPanel(): React.ReactElement {
+interface ArticleViewerPanelProps {
+	requestedFilePath?: string | null;
+	onFileOpened?: () => void;
+}
+
+export function ArticleViewerPanel({
+	requestedFilePath,
+	onFileOpened,
+}: ArticleViewerPanelProps): React.ReactElement {
 	const { app } = useApp();
 	const [selectedFile, setSelectedFile] = useState<TFile | null>(null);
 	const { content, save: saveRaw, refresh: refreshContent } = useFileContent(selectedFile);
@@ -40,6 +48,16 @@ export function ArticleViewerPanel(): React.ReactElement {
 		},
 		[content, saveRaw],
 	);
+
+	useEffect(() => {
+		if (!requestedFilePath) return;
+		const abstractFile = app.vault.getAbstractFileByPath(requestedFilePath);
+		if (abstractFile instanceof TFile) {
+			setSelectedFile(abstractFile);
+			setEditorView(null);
+		}
+		onFileOpened?.();
+	}, [requestedFilePath, app.vault, onFileOpened]);
 
 	const handleFileSelect = useCallback((file: TFile | null) => {
 		setSelectedFile(file);

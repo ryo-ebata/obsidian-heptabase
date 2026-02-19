@@ -8,3 +8,9 @@ export interface PluginContextValue {
 }
 
 export const PluginContext = createContext<PluginContextValue | null>(null);
+
+export interface SidebarActionsValue {
+	openInArticle: (filePath: string) => void;
+}
+
+export const SidebarActionsContext = createContext<SidebarActionsValue | null>(null);

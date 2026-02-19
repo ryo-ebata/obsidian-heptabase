@@ -167,13 +167,23 @@ describe("useFileMetadata", () => {
 			wrapper: createWrapper(app),
 		});
 
-		const initialMetadata = result.current.metadata;
+		expect(result.current.metadata?.frontmatter).toEqual({});
+
+		(app.metadataCache.getFileCache as Mock).mockReturnValue({
+			frontmatter: {
+				position: {
+					start: { line: 0, col: 0, offset: 0 },
+					end: { line: 2, col: 3, offset: 20 },
+				},
+				sneaky: "value",
+			},
+		});
 
 		act(() => {
 			changedCallback!(otherFile, "", {});
 		});
 
-		expect(result.current.metadata).toBe(initialMetadata);
+		expect(result.current.metadata?.frontmatter).toEqual({});
 	});
 
 	it("calls offref on unmount", () => {

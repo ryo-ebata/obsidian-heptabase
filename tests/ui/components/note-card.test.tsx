@@ -1,9 +1,10 @@
 import type { NoteDragData } from "@/types/plugin";
 import { NoteCard } from "@/ui/components/note-card";
+import type { SidebarActionsValue } from "@/ui/context";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MarkdownRenderer, TFile } from "obsidian";
+import { App, MarkdownRenderer, Menu, Notice, TFile } from "obsidian";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { type Mock, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "../../helpers/create-wrapper";
 
 describe("NoteCard", () => {
@@ -91,10 +92,105 @@ describe("NoteCard", () => {
 		expect(card).not.toBeNull();
 	});
 
-	it("title does not have font-medium class", () => {
+	it("title has font-medium class", () => {
 		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
 		const title = container.querySelector(".truncate");
 		expect(title).not.toBeNull();
-		expect(title!.classList.contains("font-medium")).toBe(false);
+		expect(title!.classList.contains("font-medium")).toBe(true);
+	});
+
+	it("uses subtle border class", () => {
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
+		const card = container.querySelector("[draggable]");
+		expect(card!.classList.contains("border-ob-border-subtle")).toBe(true);
+	});
+
+	it("has hover transition classes", () => {
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
+		const card = container.querySelector("[draggable]");
+		expect(card!.classList.contains("transition-all")).toBe(true);
+		expect(card!.classList.contains("duration-150")).toBe(true);
+	});
+
+	it("shows context menu on right click", () => {
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
+		const card = container.querySelector("[draggable]")!;
+
+		fireEvent.contextMenu(card);
+
+		const menu = Menu.lastInstance!;
+		expect(menu.addItem).toHaveBeenCalledTimes(2);
+		expect(menu.showAtMouseEvent).toHaveBeenCalled();
+	});
+
+	it("adds file to canvas via context menu", () => {
+		const app = new App();
+		const mockCanvas = {
+			tx: 0,
+			ty: 0,
+			tZoom: 1,
+			createFileNode: vi.fn(),
+		};
+		(app.workspace.getLeavesOfType as Mock).mockReturnValue([
+			{ view: { canvas: mockCanvas } },
+		]);
+
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, {
+			wrapper: createWrapper(app),
+		});
+		const card = container.querySelector("[draggable]")!;
+
+		fireEvent.contextMenu(card);
+
+		const menu = Menu.lastInstance!;
+		const canvasItem = menu.items[0];
+		const onClickCb = (canvasItem.onClick as Mock).mock.calls[0][0];
+		onClickCb();
+
+		expect(mockCanvas.createFileNode).toHaveBeenCalledWith(
+			expect.objectContaining({
+				file,
+				save: true,
+			}),
+		);
+	});
+
+	it("shows notice when no canvas is open", () => {
+		const app = new App();
+		(app.workspace.getLeavesOfType as Mock).mockReturnValue([]);
+
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, {
+			wrapper: createWrapper(app),
+		});
+		const card = container.querySelector("[draggable]")!;
+
+		fireEvent.contextMenu(card);
+
+		const menu = Menu.lastInstance!;
+		const canvasItem = menu.items[0];
+		const onClickCb = (canvasItem.onClick as Mock).mock.calls[0][0];
+		onClickCb();
+
+		expect(Notice.lastInstance).not.toBeNull();
+		expect(Notice.lastInstance!.message).toBe("No canvas is open");
+	});
+
+	it("calls openInArticle via context menu", () => {
+		const openInArticle = vi.fn();
+		const sidebarActions: SidebarActionsValue = { openInArticle };
+
+		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, {
+			wrapper: createWrapper(undefined, undefined, sidebarActions),
+		});
+		const card = container.querySelector("[draggable]")!;
+
+		fireEvent.contextMenu(card);
+
+		const menu = Menu.lastInstance!;
+		const articleItem = menu.items[1];
+		const onClickCb = (articleItem.onClick as Mock).mock.calls[0][0];
+		onClickCb();
+
+		expect(openInArticle).toHaveBeenCalledWith("my-note.md");
 	});
 });
