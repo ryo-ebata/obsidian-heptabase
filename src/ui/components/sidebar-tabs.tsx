@@ -10,7 +10,6 @@ interface SidebarTabsProps {
 const TABS: { id: SidebarTab; label: string }[] = [
 	{ id: "card-library", label: "Card Library" },
 	{ id: "article-viewer", label: "Article" },
-	{ id: "canvas-info", label: "Info" },
 ];
 
 export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps): React.ReactElement {

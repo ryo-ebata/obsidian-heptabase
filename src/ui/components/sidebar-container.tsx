@@ -1,6 +1,5 @@
 import type { SidebarTab } from "@/types/plugin";
 import { ArticleViewerPanel } from "@/ui/components/article-viewer-panel";
-import { CanvasInfoPanel } from "@/ui/components/canvas-info-panel";
 import { HeadingExplorer } from "@/ui/components/heading-explorer";
 import { SidebarTabs } from "@/ui/components/sidebar-tabs";
 import type React from "react";
@@ -18,7 +17,6 @@ export function SidebarContainer(): React.ReactElement {
 			<SidebarTabs activeTab={activeTab} onTabChange={handleTabChange} />
 			{activeTab === "card-library" && <HeadingExplorer />}
 			{activeTab === "article-viewer" && <ArticleViewerPanel />}
-			{activeTab === "canvas-info" && <CanvasInfoPanel />}
 		</div>
 	);
 }

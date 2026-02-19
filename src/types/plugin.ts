@@ -31,7 +31,7 @@ export type DragData =
 	| MultiHeadingDragData
 	| TextSelectionDragData;
 
-export type SidebarTab = "card-library" | "article-viewer" | "canvas-info";
+export type SidebarTab = "card-library" | "article-viewer";
 
 export interface EdgeOptions {
 	fromNode: string;

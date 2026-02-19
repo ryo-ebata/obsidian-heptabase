@@ -2,7 +2,7 @@ import { SidebarContainer } from "@/ui/components/sidebar-container";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { App } from "obsidian";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createWrapper } from "../../helpers/create-wrapper";
 
 describe("SidebarContainer", () => {
@@ -40,14 +40,7 @@ describe("SidebarContainer", () => {
 		expect(screen.getByPlaceholderText("Search notes...")).toBeDefined();
 	});
 
-	it("switches to Info panel when Info tab is clicked", () => {
-		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([]);
-		render(<SidebarContainer />, { wrapper: createWrapper(app) });
-		fireEvent.click(screen.getByText("Info"));
-		expect(screen.getByText("No node selected")).toBeDefined();
-	});
-
-	it("applies flex column layout", () => {
+it("applies flex column layout", () => {
 		const { container } = render(<SidebarContainer />, { wrapper: createWrapper(app) });
 		expect(container.querySelector(".h-full.flex.flex-col")).not.toBeNull();
 	});
