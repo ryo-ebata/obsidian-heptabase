@@ -13,13 +13,23 @@ import type {
 	TextSelectionDragData,
 } from "@/types/plugin";
 import type { HeptabaseSettings } from "@/types/settings";
+import { clientToCanvasPos } from "@/utils/canvas-coordinates";
 import { calculateGridPositions } from "@/utils/grid-layout";
 import { notifyError } from "@/utils/notify-error";
 import { Notice, TFile, type App } from "obsidian";
 
-function getDropPosition(evt: DragEvent): { x: number; y: number } {
-	/* v8 ignore next -- DragEvent always has clientX/clientY */
-	return { x: evt.clientX ?? 0, y: evt.clientY ?? 0 };
+function getDropPosition(
+	evt: DragEvent,
+	canvas: { tx: number; ty: number; tZoom: number },
+): { x: number; y: number } {
+	const canvasEl = (evt.target as HTMLElement | null)?.closest?.(
+		".canvas-wrapper",
+	) as HTMLElement | null;
+	/* v8 ignore next 2 -- fallback: drop outside canvas wrapper */
+	if (!canvasEl) {
+		return { x: evt.clientX ?? 0, y: evt.clientY ?? 0 };
+	}
+	return clientToCanvasPos(evt.clientX ?? 0, evt.clientY ?? 0, canvas, canvasEl);
 }
 
 export class DropHandler {
@@ -71,7 +81,11 @@ export class DropHandler {
 				return;
 			}
 
-			this.canvasOperator.addNodeToCanvas(canvasView.canvas, file, getDropPosition(evt));
+			this.canvasOperator.addNodeToCanvas(
+				canvasView.canvas,
+				file,
+				getDropPosition(evt, canvasView.canvas),
+			);
 
 			new Notice(`Added "${file.basename}" to Canvas`);
 		} catch (error) {
@@ -92,7 +106,7 @@ export class DropHandler {
 				return;
 			}
 
-			const position = getDropPosition(evt);
+			const position = getDropPosition(evt, canvasView.canvas);
 
 			if (this.settings.dropMode === "reference") {
 				const subpath = `#${dragData.headingText}`;
@@ -161,7 +175,7 @@ export class DropHandler {
 		}
 
 		try {
-			const position = getDropPosition(evt);
+			const position = getDropPosition(evt, canvasView.canvas);
 			const items = dragData.items;
 
 			if (this.settings.dropMode === "reference") {
@@ -320,7 +334,7 @@ export class DropHandler {
 				return;
 			}
 
-			const position = getDropPosition(evt);
+			const position = getDropPosition(evt, canvasView.canvas);
 			const title = this.deriveTitle(dragData);
 
 			const createNode = async () => {

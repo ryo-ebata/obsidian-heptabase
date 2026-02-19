@@ -11,11 +11,19 @@ import * as obsidian from "obsidian";
 import { App, TFile } from "obsidian";
 import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+function createMockCanvasWrapper() {
+	return {
+		getBoundingClientRect: () =>
+			({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0 }) as DOMRect,
+	};
+}
+
 function createMockDragEvent(data?: string): DragEvent {
 	return {
 		dataTransfer: data ? { getData: vi.fn().mockReturnValue(data) } : null,
 		clientX: 100,
 		clientY: 200,
+		target: { closest: vi.fn().mockReturnValue(createMockCanvasWrapper()) },
 	} as unknown as DragEvent;
 }
 
@@ -1317,6 +1325,65 @@ describe("DropHandler", () => {
 
 			const calledTitle = (fileCreator.createFile as Mock).mock.calls[0][0] as string;
 			expect(calledTitle.length).toBeLessThanOrEqual(50);
+		});
+	});
+
+	describe("viewport to canvas coordinate conversion", () => {
+		it("converts drop position using canvas pan and zoom", async () => {
+			const file = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(file);
+			const canvasView = createMockCanvasView();
+			canvasView.canvas.tx = 200;
+			canvasView.canvas.ty = 100;
+			canvasView.canvas.tZoom = 2;
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const data = JSON.stringify({ type: "note-drag", filePath: "notes/test.md" });
+			const evt = createMockDragEvent(data);
+			await handler.handleCanvasDrop(evt);
+
+			// x = (100 - 0 - 200) / 2 = -50
+			// y = (200 - 0 - 100) / 2 = 50
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(canvasView.canvas, file, {
+				x: -50,
+				y: 50,
+			});
+		});
+
+		it("accounts for canvas element offset", async () => {
+			const file = new TFile("notes/test.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(file);
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			const canvasWrapper = {
+				getBoundingClientRect: () =>
+					({
+						left: 50,
+						top: 30,
+						right: 0,
+						bottom: 0,
+						width: 0,
+						height: 0,
+						x: 0,
+						y: 0,
+					}) as DOMRect,
+			};
+			const data = JSON.stringify({ type: "note-drag", filePath: "notes/test.md" });
+			const evt = {
+				dataTransfer: { getData: vi.fn().mockReturnValue(data) },
+				clientX: 100,
+				clientY: 200,
+				target: { closest: vi.fn().mockReturnValue(canvasWrapper) },
+			} as unknown as DragEvent;
+			await handler.handleCanvasDrop(evt);
+
+			// x = (100 - 50 - 0) / 1 = 50
+			// y = (200 - 30 - 0) / 1 = 170
+			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(canvasView.canvas, file, {
+				x: 50,
+				y: 170,
+			});
 		});
 	});
 });
