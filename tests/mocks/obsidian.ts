@@ -11,8 +11,14 @@ export interface HeadingCache {
 	position: Pos;
 }
 
+export interface FrontMatterCache {
+	position: Pos;
+	[key: string]: unknown;
+}
+
 export interface CachedMetadata {
 	headings?: HeadingCache[];
+	frontmatter?: FrontMatterCache;
 }
 
 export const VIEW_TYPE_CANVAS = "canvas";
@@ -68,6 +74,7 @@ export class FileManager {
 				fn(frontmatter);
 			},
 		);
+	renameFile = vi.fn().mockResolvedValue(undefined);
 }
 
 export class Workspace {
@@ -88,7 +95,8 @@ export class MarkdownView {
 
 export class MetadataCache {
 	getFileCache = vi.fn().mockReturnValue(null);
-	on = vi.fn();
+	on = vi.fn().mockReturnValue({ id: "metadata-event-ref" });
+	offref = vi.fn();
 }
 
 export class App {

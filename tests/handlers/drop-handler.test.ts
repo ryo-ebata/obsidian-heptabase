@@ -58,13 +58,7 @@ describe("DropHandler", () => {
 			createFile: vi.fn().mockResolvedValue(new TFile("new-file.md")),
 		} as unknown as FileCreator;
 
-		handler = new DropHandler(
-			app,
-			settings,
-			canvasObserver,
-			canvasOperator,
-			fileCreator,
-		);
+		handler = new DropHandler(app, settings, canvasObserver, canvasOperator, fileCreator);
 	});
 
 	afterEach(() => {

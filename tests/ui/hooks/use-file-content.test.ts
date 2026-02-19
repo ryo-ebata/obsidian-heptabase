@@ -102,6 +102,46 @@ describe("useFileContent", () => {
 		expect(app.vault.modify).toHaveBeenCalledWith(file, "# Updated content");
 	});
 
+	it("refresh re-reads file content", async () => {
+		const app = new App();
+		const file = new TFile("notes/test.md");
+		(app.vault.read as Mock).mockResolvedValue("Original content");
+
+		const { result } = renderHook(() => useFileContent(file), {
+			wrapper: createWrapper(app),
+		});
+
+		await waitFor(() => {
+			expect(result.current.content).toBe("Original content");
+		});
+
+		(app.vault.read as Mock).mockResolvedValue("Updated content");
+
+		await act(async () => {
+			result.current.refresh();
+		});
+
+		await waitFor(() => {
+			expect(result.current.content).toBe("Updated content");
+		});
+
+		expect(app.vault.read).toHaveBeenCalledTimes(2);
+	});
+
+	it("refresh is a no-op when file is null", async () => {
+		const app = new App();
+
+		const { result } = renderHook(() => useFileContent(null), {
+			wrapper: createWrapper(app),
+		});
+
+		await act(async () => {
+			result.current.refresh();
+		});
+
+		expect(app.vault.read).not.toHaveBeenCalled();
+	});
+
 	it("save is a no-op when file is null", async () => {
 		const app = new App();
 

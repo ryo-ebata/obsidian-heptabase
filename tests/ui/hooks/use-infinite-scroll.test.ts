@@ -90,10 +90,9 @@ describe("useInfiniteScroll", () => {
 
 	it("resets page when items change", () => {
 		const items1 = Array.from({ length: 50 }, (_, i) => i);
-		const { result, rerender } = renderHook(
-			({ items }) => useInfiniteScroll(items, PAGE_SIZE),
-			{ initialProps: { items: items1 } },
-		);
+		const { result, rerender } = renderHook(({ items }) => useInfiniteScroll(items, PAGE_SIZE), {
+			initialProps: { items: items1 },
+		});
 
 		const sentinel = document.createElement("div");
 		act(() => {

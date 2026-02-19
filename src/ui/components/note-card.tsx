@@ -38,12 +38,7 @@ export function NoteCard({ file, excerpt }: NoteCardProps): React.ReactElement {
 	const className = `p-2 rounded border border-ob-border cursor-grab hover:bg-ob-hover ${isDragging ? "opacity-50" : ""}`;
 
 	return (
-		<div
-			className={className}
-			draggable
-			onDragStart={handleDragStart}
-			onDragEnd={handleDragEnd}
-		>
+		<div className={className} draggable onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 			<div className="text-ob-ui-small truncate">{file.basename}</div>
 			{excerpt && (
 				<div

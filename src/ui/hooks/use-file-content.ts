@@ -6,6 +6,7 @@ interface UseFileContentReturn {
 	content: string;
 	isLoading: boolean;
 	save: (newContent: string) => Promise<void>;
+	refresh: () => void;
 }
 
 export function useFileContent(file: TFile | null): UseFileContentReturn {
@@ -45,5 +46,14 @@ export function useFileContent(file: TFile | null): UseFileContentReturn {
 		[app.vault, file],
 	);
 
-	return { content, isLoading, save };
+	const refresh = useCallback(() => {
+		if (!file) {
+			return;
+		}
+		app.vault.read(file).then((text) => {
+			setContent(text);
+		});
+	}, [app.vault, file]);
+
+	return { content, isLoading, save, refresh };
 }

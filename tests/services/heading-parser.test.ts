@@ -48,9 +48,7 @@ describe("HeadingParser", () => {
 		it("skips blank lines in excerpt", async () => {
 			const file = new TFile("notes/blanks.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.cachedRead as Mock).mockResolvedValue(
-				"\n\nFirst\n\nSecond\n\nThird\n\nFourth",
-			);
+			(app.vault.cachedRead as Mock).mockResolvedValue("\n\nFirst\n\nSecond\n\nThird\n\nFourth");
 
 			const result = await parser.search("");
 
@@ -113,9 +111,7 @@ describe("HeadingParser", () => {
 		it("returns excerpt from content when matched by body", async () => {
 			const file = new TFile("notes/body-match.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.read as Mock).mockResolvedValue(
-				"Line one\nLine two\nLine three\nLine four",
-			);
+			(app.vault.read as Mock).mockResolvedValue("Line one\nLine two\nLine three\nLine four");
 
 			const result = await parser.search("line two");
 
