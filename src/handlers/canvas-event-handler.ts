@@ -1,7 +1,6 @@
 import type { CanvasObserver } from "@/services/canvas-observer";
 import type { QuickCardCreator } from "@/services/quick-card-creator";
 import type { HeptabaseSettings } from "@/types/settings";
-import { clientToCanvasPos } from "@/utils/canvas-coordinates";
 import { notifyError } from "@/utils/notify-error";
 import { Notice } from "obsidian";
 
@@ -30,14 +29,7 @@ export class CanvasEventHandler {
 			return;
 		}
 
-		const canvasEl = target.closest(".canvas-wrapper") as HTMLElement;
-
-		const position = clientToCanvasPos(
-			evt.clientX,
-			evt.clientY,
-			canvasView.canvas,
-			canvasEl,
-		);
+		const position = canvasView.canvas.posFromEvt(evt);
 
 		try {
 			const file = await this.quickCardCreator.createCardAtPosition(

@@ -1,5 +1,5 @@
 import { useFileContent } from "@/ui/hooks/use-file-content";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { App, TFile } from "obsidian";
 import { type Mock, describe, expect, it } from "vitest";
 import { createWrapper } from "../../helpers/create-wrapper";
@@ -80,5 +80,39 @@ describe("useFileContent", () => {
 
 		expect(result.current.content).toBe("");
 		expect(result.current.isLoading).toBe(false);
+	});
+
+	it("save calls vault.modify with new content", async () => {
+		const app = new App();
+		const file = new TFile("notes/test.md");
+		(app.vault.read as Mock).mockResolvedValue("# Hello");
+
+		const { result } = renderHook(() => useFileContent(file), {
+			wrapper: createWrapper(app),
+		});
+
+		await waitFor(() => {
+			expect(result.current.content).toBe("# Hello");
+		});
+
+		await act(async () => {
+			await result.current.save("# Updated content");
+		});
+
+		expect(app.vault.modify).toHaveBeenCalledWith(file, "# Updated content");
+	});
+
+	it("save is a no-op when file is null", async () => {
+		const app = new App();
+
+		const { result } = renderHook(() => useFileContent(null), {
+			wrapper: createWrapper(app),
+		});
+
+		await act(async () => {
+			await result.current.save("anything");
+		});
+
+		expect(app.vault.modify).not.toHaveBeenCalled();
 	});
 });

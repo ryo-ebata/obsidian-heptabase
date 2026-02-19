@@ -6,6 +6,8 @@ export default defineConfig({
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 			obsidian: path.resolve(__dirname, "./tests/mocks/obsidian.ts"),
+			"@codemirror/state": path.resolve(__dirname, "./tests/mocks/codemirror-state.ts"),
+			"@codemirror/view": path.resolve(__dirname, "./tests/mocks/codemirror-view.ts"),
 		},
 	},
 	test: {

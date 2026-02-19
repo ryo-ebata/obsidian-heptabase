@@ -1,20 +1,26 @@
-import { ArticleContent } from "@/ui/components/article-content";
+import { ArticleEditor } from "@/ui/components/article-editor";
 import { FileSearchDropdown } from "@/ui/components/file-search-dropdown";
 import { SelectionDragHandle } from "@/ui/components/selection-drag-handle";
+import { useEditorSelection } from "@/ui/hooks/use-editor-selection";
 import { useFileContent } from "@/ui/hooks/use-file-content";
-import { useTextSelection } from "@/ui/hooks/use-text-selection";
+import type { EditorView } from "@codemirror/view";
 import type { TFile } from "obsidian";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 export function ArticleViewerPanel(): React.ReactElement {
 	const [selectedFile, setSelectedFile] = useState<TFile | null>(null);
-	const { content } = useFileContent(selectedFile);
-	const contentRef = useRef<HTMLDivElement>(null);
-	const { selectedText, selectionRect } = useTextSelection(contentRef);
+	const { content, save } = useFileContent(selectedFile);
+	const [editorView, setEditorView] = useState<EditorView | null>(null);
+	const { selectedText, selectionRect } = useEditorSelection(editorView);
 
 	const handleFileSelect = useCallback((file: TFile | null) => {
 		setSelectedFile(file);
+		setEditorView(null);
+	}, []);
+
+	const handleEditorView = useCallback((view: EditorView | null) => {
+		setEditorView(view);
 	}, []);
 
 	return (
@@ -22,7 +28,7 @@ export function ArticleViewerPanel(): React.ReactElement {
 			<FileSearchDropdown onSelect={handleFileSelect} />
 			{selectedFile && (
 				<>
-					<ArticleContent content={content} filePath={selectedFile.path} contentRef={contentRef} />
+					<ArticleEditor content={content} onSave={save} onEditorView={handleEditorView} />
 					<SelectionDragHandle
 						selectedText={selectedText}
 						selectionRect={selectionRect}

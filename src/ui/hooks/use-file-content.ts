@@ -1,10 +1,11 @@
 import type { TFile } from "obsidian";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useApp } from "./use-app";
 
 interface UseFileContentReturn {
 	content: string;
 	isLoading: boolean;
+	save: (newContent: string) => Promise<void>;
 }
 
 export function useFileContent(file: TFile | null): UseFileContentReturn {
@@ -34,5 +35,15 @@ export function useFileContent(file: TFile | null): UseFileContentReturn {
 		};
 	}, [app.vault, file]);
 
-	return { content, isLoading };
+	const save = useCallback(
+		async (newContent: string) => {
+			if (!file) {
+				return;
+			}
+			await app.vault.modify(file, newContent);
+		},
+		[app.vault, file],
+	);
+
+	return { content, isLoading, save };
 }

@@ -46,7 +46,7 @@ describe("FileSearchDropdown", () => {
 		expect(screen.queryByText("notes/world.md")).toBeNull();
 	});
 
-	it("calls onSelect when a file is clicked", async () => {
+	it("calls onSelect when a file is clicked and clears query", async () => {
 		const file1 = new TFile("notes/hello.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file1]);
 		const onSelect = vi.fn();
@@ -63,5 +63,33 @@ describe("FileSearchDropdown", () => {
 
 		fireEvent.click(screen.getByText("notes/hello.md"));
 		expect(onSelect).toHaveBeenCalledWith(file1);
+
+		expect(screen.getByPlaceholderText("Search articles...")).toHaveProperty("value", "");
+		expect(screen.queryByRole("listitem")).toBeNull();
+	});
+
+	it("hides results when clicking outside", async () => {
+		const file1 = new TFile("notes/hello.md");
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file1]);
+
+		render(<FileSearchDropdown onSelect={vi.fn()} />, {
+			wrapper: createWrapper(app),
+		});
+
+		fireEvent.change(screen.getByPlaceholderText("Search articles..."), {
+			target: { value: "hello" },
+		});
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(300);
+		});
+
+		expect(screen.getByText("notes/hello.md")).toBeDefined();
+
+		act(() => {
+			document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+		});
+
+		expect(screen.queryByRole("listitem")).toBeNull();
 	});
 });

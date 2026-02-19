@@ -15,6 +15,7 @@ function createMockCanvasView(): CanvasView {
 			requestSave: vi.fn(),
 			createFileNode: vi.fn(),
 			selection: new Set(),
+			posFromEvt: vi.fn().mockReturnValue({ x: 100, y: 200 }),
 			tx: 0,
 			ty: 0,
 			tZoom: 1,
@@ -26,12 +27,6 @@ function createMockCanvasView(): CanvasView {
 function createMockMouseEvent(overrides: Partial<MouseEvent> = {}): MouseEvent {
 	const canvasWrapper = document.createElement("div");
 	canvasWrapper.classList.add("canvas-wrapper");
-	canvasWrapper.getBoundingClientRect = vi.fn().mockReturnValue({
-		left: 0,
-		top: 0,
-		width: 800,
-		height: 600,
-	});
 
 	const target = document.createElement("div");
 	canvasWrapper.appendChild(target);

@@ -1,9 +1,26 @@
+import type { EmbeddableEditorHandle } from "@/services/embeddable-editor";
 import { ArticleViewerPanel } from "@/ui/components/article-viewer-panel";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { App, MarkdownRenderer, TFile } from "obsidian";
+import { EditorView } from "@codemirror/view";
+import { App, TFile } from "obsidian";
 import React from "react";
 import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWrapper } from "../../helpers/create-wrapper";
+
+vi.mock("@/services/embeddable-editor", () => ({
+	createEmbeddableEditor: vi.fn(),
+}));
+
+import { createEmbeddableEditor } from "@/services/embeddable-editor";
+
+function createMockEditor(): EmbeddableEditorHandle {
+	return {
+		value: "",
+		set: vi.fn(),
+		cm: new EditorView(),
+		destroy: vi.fn(),
+	};
+}
 
 describe("ArticleViewerPanel", () => {
 	let app: App;
@@ -11,8 +28,7 @@ describe("ArticleViewerPanel", () => {
 	beforeEach(() => {
 		app = new App();
 		vi.useFakeTimers();
-		(MarkdownRenderer.render as Mock).mockReset();
-		(MarkdownRenderer.render as Mock).mockResolvedValue(undefined);
+		(createEmbeddableEditor as Mock).mockReturnValue(createMockEditor());
 	});
 
 	afterEach(() => {
@@ -24,12 +40,12 @@ describe("ArticleViewerPanel", () => {
 		expect(screen.getByPlaceholderText("Search articles...")).toBeDefined();
 	});
 
-	it("shows file content after selecting a file", async () => {
+	it("shows editor after selecting a file", async () => {
 		const file = new TFile("notes/hello.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
 		(app.vault.read as Mock).mockResolvedValue("# Hello World\n\nContent here.");
 
-		render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
+		const { container } = render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
 
 		fireEvent.change(screen.getByPlaceholderText("Search articles..."), {
 			target: { value: "hello" },
@@ -45,31 +61,16 @@ describe("ArticleViewerPanel", () => {
 			await vi.advanceTimersByTimeAsync(0);
 		});
 
-		expect(MarkdownRenderer.render).toHaveBeenCalled();
-	});
-
-	it("shows markdown-rendered container after selecting file", async () => {
-		const file = new TFile("notes/hello.md");
-		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-		(app.vault.read as Mock).mockResolvedValue("# Hello");
-
-		const { container } = render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
-
-		fireEvent.change(screen.getByPlaceholderText("Search articles..."), {
-			target: { value: "hello" },
-		});
-
-		await act(async () => {
-			await vi.advanceTimersByTimeAsync(300);
-		});
-
-		fireEvent.click(screen.getByText("notes/hello.md"));
-
-		expect(container.querySelector(".markdown-rendered")).not.toBeNull();
+		expect(container.querySelector(".article-editor")).not.toBeNull();
 	});
 
 	it("renders container with full height", () => {
 		const { container } = render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
 		expect(container.querySelector(".h-full.flex.flex-col")).not.toBeNull();
+	});
+
+	it("does not show editor before file selection", () => {
+		const { container } = render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
+		expect(container.querySelector(".article-editor")).toBeNull();
 	});
 });

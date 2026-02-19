@@ -50,6 +50,7 @@ export interface Canvas {
 		save?: boolean;
 	}): CanvasNode;
 	selection?: Set<CanvasNode>;
+	posFromEvt(evt: MouseEvent | DragEvent): { x: number; y: number };
 	tx: number;
 	ty: number;
 	tZoom: number;
