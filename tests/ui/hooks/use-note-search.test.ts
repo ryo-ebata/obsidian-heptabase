@@ -33,7 +33,7 @@ describe("useNoteSearch", () => {
 		vi.useRealTimers();
 	});
 
-	it("has empty query and empty results in initial state", () => {
+	it("loads all notes on initial mount", () => {
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper() });
 
 		expect(result.current.query).toBe("");

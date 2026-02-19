@@ -17,6 +17,10 @@ export function useNoteSearch(): NoteSearchState {
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	useEffect(() => {
+		setResults(parser.searchNotesWithHeadings(""));
+	}, [parser]);
+
 	const setQuery = useCallback(
 		(newQuery: string) => {
 			setQueryState(newQuery);
