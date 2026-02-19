@@ -196,6 +196,33 @@ describe("ContentExtractor", () => {
 		});
 	});
 
+	describe("edge cases", () => {
+		it("extractSectionTree returns empty headingText when headingLine has no heading pattern", () => {
+			const content = "not a heading\nsome content\n## Next";
+			const tree = extractor.extractSectionTree(content, 0, 1);
+			expect(tree.headingText).toBe("");
+		});
+
+		it("does not close code block when fence line has trailing text", () => {
+			const content = [
+				"## Heading",
+				"",
+				"```",
+				"## Not a heading",
+				"``` some trailing text",
+				"## Still inside code block",
+				"```",
+				"",
+				"## Real Next Heading",
+			].join("\n");
+
+			const result = extractor.extractContent(content, 0, 2);
+			expect(result).toContain("## Not a heading");
+			expect(result).toContain("## Still inside code block");
+			expect(result).not.toContain("Real Next Heading");
+		});
+	});
+
 	describe("frontmatter handling", () => {
 		it("skips frontmatter when extracting content", () => {
 			const content = [

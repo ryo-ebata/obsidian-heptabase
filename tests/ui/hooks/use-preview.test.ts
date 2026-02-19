@@ -97,6 +97,28 @@ describe("usePreview", () => {
 		expect(result.current.isPreviewOpen).toBe(false);
 	});
 
+	it("uses empty string fallback when contents array is shorter than items", () => {
+		const { result } = renderHook(() => usePreview());
+
+		const threeItems: HeadingDragData[] = [
+			...sampleItems,
+			{
+				type: "heading-explorer-drag",
+				filePath: "notes/c.md",
+				headingText: "Section C",
+				headingLevel: 2,
+				headingLine: 15,
+			},
+		];
+
+		act(() => {
+			result.current.openPreview(threeItems, sampleContents, vi.fn(), vi.fn());
+		});
+
+		expect(result.current.previewSections).toHaveLength(3);
+		expect(result.current.previewSections[2]!.content).toBe("");
+	});
+
 	it("closePreview calls onCancel and resets state", () => {
 		const onCancel = vi.fn();
 		const { result } = renderHook(() => usePreview());

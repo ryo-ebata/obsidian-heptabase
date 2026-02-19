@@ -20,7 +20,6 @@ describe("FileCreator", () => {
 			defaultEdgeColor: "",
 			defaultEdgeLabel: "",
 			enableEdgeSync: true,
-			connectionsSectionName: "Connections",
 			quickCardDefaultTitle: "Untitled",
 		};
 		creator = new FileCreator(app, settings);

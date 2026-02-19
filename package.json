@@ -21,25 +21,24 @@
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.5.2",
+    "@vitest/coverage-v8": "4.1.0-beta.4",
     "builtin-modules": "^5.0.0",
     "jsdom": "^28.1.0",
     "obsidian": "^1.7.2",
     "oxfmt": "^0.33.0",
     "oxlint": "^1.48.0",
-    "@vitejs/plugin-react": "^4.5.2",
     "rolldown": "1.0.0-rc.5",
-    "vite": "^6.3.5",
     "tailwindcss": "^4.2.0",
-    "typescript": "^5.6.0",
-    "vitest": "^4.0.18"
+    "typescript": "6.0.0-beta",
+    "vite": "8.0.0-beta.15",
+    "vitest": "4.1.0-beta.4"
   },
   "dependencies": {
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
+    "onlyBuiltDependencies": []
   }
 }

@@ -23,8 +23,8 @@ export class CommandHandler {
 		}
 
 		this.canvasOperator.addEdgeToCanvas(canvasView.canvas, {
-			fromNode: selectedNodes[0].id,
-			toNode: selectedNodes[1].id,
+			fromNode: selectedNodes[0]!.id,
+			toNode: selectedNodes[1]!.id,
 			color: this.settings.defaultEdgeColor || undefined,
 			label: this.settings.defaultEdgeLabel || undefined,
 		});

@@ -34,6 +34,7 @@ export class HeadingExplorerView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
+		if (!container) return;
 		container.empty();
 
 		const contextValue: PluginContextValue = {

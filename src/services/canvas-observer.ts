@@ -6,11 +6,12 @@ export class CanvasObserver {
 
 	getActiveCanvasView(): CanvasView | null {
 		const canvasLeaves = this.app.workspace.getLeavesOfType("canvas");
-		if (canvasLeaves.length === 0) {
+		const firstLeaf = canvasLeaves[0];
+		if (!firstLeaf) {
 			return null;
 		}
 
-		const canvasView = canvasLeaves[0].view as unknown as CanvasView;
+		const canvasView = firstLeaf.view as unknown as CanvasView;
 		if (!canvasView?.canvas) {
 			return null;
 		}

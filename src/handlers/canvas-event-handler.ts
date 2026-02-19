@@ -30,16 +30,13 @@ export class CanvasEventHandler {
 			return;
 		}
 
-		const canvasEl = target.closest(".canvas-wrapper");
-		if (!canvasEl) {
-			return;
-		}
+		const canvasEl = target.closest(".canvas-wrapper") as HTMLElement;
 
 		const position = clientToCanvasPos(
 			evt.clientX,
 			evt.clientY,
 			canvasView.canvas,
-			canvasEl as HTMLElement,
+			canvasEl,
 		);
 
 		try {

@@ -76,6 +76,13 @@ describe("CanvasEventHandler", () => {
 			expect(canvasObserver.getActiveCanvasView).not.toHaveBeenCalled();
 		});
 
+		it("does nothing when canvasView is null but target is in canvas-wrapper", async () => {
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(null);
+			const evt = createMockMouseEvent();
+			await handler.handleCanvasDblClick(evt);
+			expect(quickCardCreator.createCardAtPosition).not.toHaveBeenCalled();
+		});
+
 		it("does nothing when target is not in canvas-wrapper", async () => {
 			const target = document.createElement("div");
 			const evt = {

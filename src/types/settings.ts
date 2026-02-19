@@ -7,7 +7,6 @@ export interface HeptabaseSettings {
 	defaultEdgeColor: string;
 	defaultEdgeLabel: string;
 	enableEdgeSync: boolean;
-	connectionsSectionName: string;
 	quickCardDefaultTitle: string;
 	recursiveDecomposition: boolean;
 	showPreviewBeforeCreate: boolean;
@@ -25,7 +24,6 @@ export const DEFAULT_SETTINGS: HeptabaseSettings = {
 	defaultEdgeColor: "",
 	defaultEdgeLabel: "",
 	enableEdgeSync: true,
-	connectionsSectionName: "Connections",
 	quickCardDefaultTitle: "Untitled",
 	recursiveDecomposition: false,
 	showPreviewBeforeCreate: false,

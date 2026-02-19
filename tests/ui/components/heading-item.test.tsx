@@ -2,7 +2,7 @@ import type { HeadingDragData, ParsedHeading } from "@/types/plugin";
 import { HeadingItem } from "@/ui/components/heading-item";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 describe("HeadingItem", () => {
 	const heading: ParsedHeading = {
@@ -58,6 +58,46 @@ describe("HeadingItem", () => {
 		render(<HeadingItem heading={heading} filePath="test.md" />);
 		const item = screen.getByText("Test Heading").closest(".cursor-grab");
 		expect(item?.getAttribute("draggable")).toBe("true");
+	});
+
+	it("shows checkbox when isSelectable is true", () => {
+		const { container } = render(
+			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={false} onToggleSelect={vi.fn()} />,
+		);
+		const checkbox = container.querySelector("input[type='checkbox']");
+		expect(checkbox).not.toBeNull();
+	});
+
+	it("calls onToggleSelect with HeadingDragData on checkbox change", () => {
+		const onToggleSelect = vi.fn();
+		const { container } = render(
+			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={false} onToggleSelect={onToggleSelect} />,
+		);
+		const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+		fireEvent.click(checkbox);
+		expect(onToggleSelect).toHaveBeenCalledWith({
+			type: "heading-explorer-drag",
+			filePath: "test.md",
+			headingText: "Test Heading",
+			headingLevel: 2,
+			headingLine: 5,
+		});
+	});
+
+	it("sets draggable to false when isSelectable is true", () => {
+		const { container } = render(
+			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} />,
+		);
+		const item = container.querySelector(".cursor-grab");
+		expect(item?.getAttribute("draggable")).toBe("false");
+	});
+
+	it("applies bg-ob-hover class when isSelected is true", () => {
+		const { container } = render(
+			<HeadingItem heading={heading} filePath="test.md" isSelectable={true} isSelected={true} onToggleSelect={vi.fn()} />,
+		);
+		const item = container.querySelector(".cursor-grab");
+		expect(item?.classList.contains("bg-ob-hover")).toBe(true);
 	});
 
 	it("applies opacity while dragging", () => {

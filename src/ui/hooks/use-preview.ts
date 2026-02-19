@@ -38,7 +38,7 @@ export function usePreview(): UsePreviewReturn {
 		) => {
 			const sections = items.map((item, i) => ({
 				item,
-				content: contents[i],
+				content: contents[i] ?? "",
 				included: true,
 			}));
 			setPreviewSections(sections);

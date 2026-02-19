@@ -36,6 +36,11 @@ describe("CanvasObserver", () => {
 			expect(observer.getActiveCanvasView()).toBeNull();
 		});
 
+		it("returns null when view has no canvas property", () => {
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: {} }]);
+			expect(observer.getActiveCanvasView()).toBeNull();
+		});
+
 		it("returns the canvas view when canvas is open", () => {
 			const canvasView = createMockCanvasView();
 			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);

@@ -35,8 +35,8 @@ export class ContentExtractor {
 		const lines = content.split("\n");
 		const codeBlockLines = this.buildCodeBlockRanges(lines);
 
-		const headingMatch = lines[headingLine].match(HEADING_PATTERN);
-		const headingText = headingMatch ? headingMatch[2] : "";
+		const headingMatch = lines[headingLine]?.match(HEADING_PATTERN);
+		const headingText = headingMatch?.[2] ?? "";
 
 		const sectionEnd = this.findNextHeadingLine(
 			lines,
@@ -51,14 +51,14 @@ export class ContentExtractor {
 
 		while (i < sectionEnd) {
 			if (codeBlockLines.has(i)) {
-				contentLines.push(lines[i]);
+				contentLines.push(lines[i]!);
 				i++;
 				continue;
 			}
 
-			const match = lines[i].match(HEADING_PATTERN);
-			if (match && match[1].length > headingLevel) {
-				const childLevel = match[1].length;
+			const match = lines[i]!.match(HEADING_PATTERN);
+			if (match && match[1]!.length > headingLevel) {
+				const childLevel = match[1]!.length;
 				const childEnd = this.findNextHeadingLine(lines, i + 1, childLevel, codeBlockLines);
 
 				const childContent = lines.slice(i, childEnd).join("\n");
@@ -68,7 +68,7 @@ export class ContentExtractor {
 
 				i = childEnd;
 			} else {
-				contentLines.push(lines[i]);
+				contentLines.push(lines[i]!);
 				i++;
 			}
 		}
@@ -111,20 +111,21 @@ export class ContentExtractor {
 		let fenceLength = 0;
 
 		for (let i = 0; i < lines.length; i++) {
-			const match = lines[i].match(CODE_FENCE_PATTERN);
+			const line = lines[i]!;
+			const match = line.match(CODE_FENCE_PATTERN);
 
 			if (inCodeBlock) {
 				codeBlockLines.add(i);
-				if (match && match[1][0] === fenceChar && match[1].length >= fenceLength) {
-					const rest = lines[i].slice(match[1].length).trim();
+				if (match && match[1]!.charAt(0) === fenceChar && match[1]!.length >= fenceLength) {
+					const rest = line.slice(match[1]!.length).trim();
 					if (rest === "") {
 						inCodeBlock = false;
 					}
 				}
 			} else if (match) {
 				inCodeBlock = true;
-				fenceChar = match[1][0];
-				fenceLength = match[1].length;
+				fenceChar = match[1]!.charAt(0);
+				fenceLength = match[1]!.length;
 				codeBlockLines.add(i);
 			}
 		}
@@ -142,8 +143,8 @@ export class ContentExtractor {
 			if (codeBlockLines.has(i)) {
 				continue;
 			}
-			const match = lines[i].match(HEADING_PATTERN);
-			if (match && match[1].length <= headingLevel) {
+			const match = lines[i]!.match(HEADING_PATTERN);
+			if (match && match[1]!.length <= headingLevel) {
 				return i;
 			}
 		}

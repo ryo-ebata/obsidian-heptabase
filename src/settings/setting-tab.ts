@@ -113,16 +113,6 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(this.updateSetting("enableEdgeSync")),
 			);
 
-		new Setting(containerEl)
-			.setName("Connections section name")
-			.setDesc("Heading name for the auto-generated connections section.")
-			.addText((text) =>
-				text
-					.setPlaceholder("e.g. Connections")
-					.setValue(this.settings.connectionsSectionName)
-					.onChange(this.updateSetting("connectionsSectionName")),
-			);
-
 		containerEl.createEl("h2", { text: "Multi-Drop Layout Settings" });
 
 		new Setting(containerEl)

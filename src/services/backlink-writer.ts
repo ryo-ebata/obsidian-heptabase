@@ -1,6 +1,11 @@
 import { ContentExtractor } from "@/services/content-extractor";
 import type { App, TFile } from "obsidian";
 
+const FRONTMATTER_KEY = {
+	"->": "connections-to",
+	"<-": "connections-from",
+} as const;
+
 export class BacklinkWriter {
 	private app: App;
 	private extractor: ContentExtractor;
@@ -36,56 +41,49 @@ export class BacklinkWriter {
 		await this.app.vault.modify(sourceFile, newContent);
 	}
 
-	async appendToConnectionsSection(
+	async addConnection(
 		file: TFile,
-		linkTarget: string,
-		sectionName: string,
+		target: string,
+		direction: "->" | "<-",
 	): Promise<void> {
-		const content = await this.app.vault.read(file);
-		const link = `[[${linkTarget}]]`;
+		const key = FRONTMATTER_KEY[direction];
+		const link = `[[${target}]]`;
 
-		if (content.includes(link)) {
-			return;
-		}
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			const connections: string[] = Array.isArray(frontmatter[key])
+				? frontmatter[key]
+				: [];
 
-		const sectionHeading = `## ${sectionName}`;
-		const sectionIndex = content.indexOf(sectionHeading);
-
-		if (sectionIndex === -1) {
-			const newContent = `${content.trimEnd()}\n\n${sectionHeading}\n\n- ${link}`;
-			await this.app.vault.modify(file, newContent);
-			return;
-		}
-
-		const lines = content.split("\n");
-		const sectionLine = content.substring(0, sectionIndex).split("\n").length - 1;
-
-		let insertLine = sectionLine + 1;
-		for (let i = sectionLine + 1; i < lines.length; i++) {
-			const line = lines[i];
-			if (line.startsWith("## ") || line.startsWith("# ")) {
-				break;
+			if (connections.includes(link)) {
+				return;
 			}
-			insertLine = i + 1;
-		}
 
-		const trimmedInsertLine = this.findLastNonEmptyLine(lines, sectionLine + 1, insertLine);
-		const before = lines.slice(0, trimmedInsertLine);
-		const after = lines.slice(trimmedInsertLine);
-
-		const newContent = [...before, `- ${link}`, ...after].join("\n").trimEnd();
-		await this.app.vault.modify(file, newContent);
+			connections.push(link);
+			frontmatter[key] = connections;
+		});
 	}
 
-	private findLastNonEmptyLine(lines: string[], start: number, end: number): number {
-		let last = end;
-		for (let i = end - 1; i >= start; i--) {
-			if (lines[i].trim() === "") {
-				last = i;
-			} else {
-				break;
+	async removeConnection(
+		file: TFile,
+		target: string,
+		direction: "->" | "<-",
+	): Promise<void> {
+		const key = FRONTMATTER_KEY[direction];
+		const link = `[[${target}]]`;
+
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			if (!Array.isArray(frontmatter[key])) {
+				return;
 			}
-		}
-		return last;
+
+			const connections: string[] = frontmatter[key];
+			const filtered = connections.filter((c) => c !== link);
+
+			if (filtered.length === 0) {
+				delete frontmatter[key];
+			} else if (filtered.length < connections.length) {
+				frontmatter[key] = filtered;
+			}
+		});
 	}
 }

@@ -123,8 +123,9 @@ export default class HeptabasePlugin extends Plugin {
 
 	private async activateView(): Promise<void> {
 		const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_HEADING_EXPLORER);
-		if (existing.length > 0) {
-			this.app.workspace.revealLeaf(existing[0]);
+		const first = existing[0];
+		if (first) {
+			this.app.workspace.revealLeaf(first);
 			return;
 		}
 

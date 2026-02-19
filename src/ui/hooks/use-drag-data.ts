@@ -18,6 +18,7 @@ function createGhostElement(options: DragVisualOptions): HTMLElement {
 	ghost.style.cssText =
 		"position: fixed; top: -1000px; left: -1000px; padding: 6px 12px; background: var(--background-secondary, #333); color: var(--text-normal, #fff); border-radius: 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; pointer-events: none; white-space: nowrap;";
 
+	/* v8 ignore next 4 -- createGhostElement is only called when label is truthy */
 	if (options.label) {
 		const label = document.createElement("span");
 		label.textContent = options.label;

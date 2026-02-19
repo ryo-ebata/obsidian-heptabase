@@ -66,6 +66,40 @@ describe("NoteItem", () => {
 		expect(icon?.classList.contains("-rotate-90")).toBe(true);
 	});
 
+	it("expands on Enter key", () => {
+		render(<NoteItem file={file} headings={headings} />);
+		const title = screen.getByText("my-note").closest(".cursor-pointer");
+		if (title) {
+			fireEvent.keyDown(title, { key: "Enter" });
+		}
+		expect(screen.getByText("Section One")).toBeDefined();
+	});
+
+	it("expands on Space key", () => {
+		render(<NoteItem file={file} headings={headings} />);
+		const title = screen.getByText("my-note").closest(".cursor-pointer");
+		if (title) {
+			fireEvent.keyDown(title, { key: " " });
+		}
+		expect(screen.getByText("Section One")).toBeDefined();
+	});
+
+	it("does not expand on non-Enter/Space keyDown", () => {
+		render(<NoteItem file={file} headings={headings} />);
+		const title = screen.getByText("my-note").closest(".cursor-pointer");
+		if (title) {
+			fireEvent.keyDown(title, { key: "Tab" });
+		}
+		expect(screen.queryByText("Section One")).toBeNull();
+	});
+
+	it("does not expand when headings are empty", () => {
+		render(<NoteItem file={file} headings={[]} />);
+		fireEvent.click(screen.getByText("my-note"));
+		const { container } = render(<NoteItem file={file} headings={[]} />);
+		expect(container.querySelector(".transition-transform")).toBeNull();
+	});
+
 	describe("note dragging", () => {
 		it("has draggable attribute on note title", () => {
 			const { container } = render(<NoteItem file={file} headings={headings} />);

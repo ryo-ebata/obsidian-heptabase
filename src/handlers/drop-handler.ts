@@ -12,6 +12,7 @@ import { notifyError } from "@/utils/notify-error";
 import { Notice, TFile, type App } from "obsidian";
 
 function getDropPosition(evt: DragEvent): { x: number; y: number } {
+	/* v8 ignore next -- DragEvent always has clientX/clientY */
 	return { x: evt.clientX ?? 0, y: evt.clientY ?? 0 };
 }
 
@@ -208,8 +209,8 @@ export class DropHandler {
 		const createdNodes: CanvasNode[] = [];
 
 		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			const extracted = contents[i];
+			const item = items[i]!;
+			const extracted = contents[i]!;
 			const sourceFile = this.app.vault.getAbstractFileByPath(item.filePath);
 			if (!(sourceFile instanceof TFile)) {
 				continue;
@@ -217,7 +218,7 @@ export class DropHandler {
 
 			const newFile = await this.fileCreator.createFile(item.headingText, extracted, sourceFile);
 
-			const node = this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, positions[i]);
+			const node = this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, positions[i]!);
 
 			if (node) {
 				createdNodes.push(node);

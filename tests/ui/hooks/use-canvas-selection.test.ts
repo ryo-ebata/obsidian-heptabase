@@ -72,6 +72,28 @@ describe("useCanvasSelection", () => {
 		expect(result.current[0].id).toBe("n1");
 	});
 
+	it("updates when selection has same length but different node IDs", () => {
+		const node1: CanvasNode = { id: "n1", x: 0, y: 0, width: 400, height: 300 };
+		const node2: CanvasNode = { id: "n2", x: 0, y: 0, width: 400, height: 300 };
+		const canvasView = createMockCanvasView([node1]);
+		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
+
+		const { result } = renderHook(() => useCanvasSelection(), {
+			wrapper: createWrapper(app),
+		});
+
+		expect(result.current).toHaveLength(1);
+		expect(result.current[0]!.id).toBe("n1");
+
+		canvasView.canvas.selection = new Set([node2]);
+		act(() => {
+			vi.advanceTimersByTime(500);
+		});
+
+		expect(result.current).toHaveLength(1);
+		expect(result.current[0]!.id).toBe("n2");
+	});
+
 	it("does not re-render when selection is the same", () => {
 		const node1: CanvasNode = { id: "n1", x: 0, y: 0, width: 400, height: 300 };
 		const canvasView = createMockCanvasView([node1]);

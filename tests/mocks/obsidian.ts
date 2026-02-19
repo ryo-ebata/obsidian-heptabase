@@ -58,6 +58,15 @@ export class Vault {
 	};
 }
 
+export class FileManager {
+	processFrontMatter = vi.fn().mockImplementation(
+		async (_file: TFile, fn: (frontmatter: Record<string, unknown>) => void) => {
+			const frontmatter: Record<string, unknown> = {};
+			fn(frontmatter);
+		},
+	);
+}
+
 export class Workspace {
 	getActiveViewOfType = vi.fn().mockReturnValue(null);
 	getLeavesOfType = vi.fn().mockReturnValue([]);
@@ -83,11 +92,13 @@ export class App {
 	vault: Vault;
 	workspace: Workspace;
 	metadataCache: MetadataCache;
+	fileManager: FileManager;
 
 	constructor() {
 		this.vault = new Vault();
 		this.workspace = new Workspace();
 		this.metadataCache = new MetadataCache();
+		this.fileManager = new FileManager();
 	}
 }
 
@@ -179,8 +190,6 @@ export class PluginSettingTab {
 	constructor(app: App, _plugin?: unknown) {
 		this.app = app;
 	}
-
-	display = vi.fn();
 }
 
 export class Setting {
@@ -204,6 +213,11 @@ export class Setting {
 		cb(this);
 		return this;
 	});
+	addDropdown = vi.fn().mockImplementation((cb: (dropdown: Setting) => void) => {
+		cb(this);
+		return this;
+	});
+	addOption = vi.fn().mockReturnThis();
 	setValue = vi.fn().mockReturnThis();
 	setPlaceholder = vi.fn().mockReturnThis();
 	onChange = vi.fn().mockReturnThis();

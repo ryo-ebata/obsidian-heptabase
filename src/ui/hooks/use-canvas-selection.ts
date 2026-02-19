@@ -7,7 +7,7 @@ function isSameSelection(prev: CanvasNode[], next: CanvasNode[]): boolean {
 		return false;
 	}
 	for (let i = 0; i < prev.length; i++) {
-		if (prev[i].id !== next[i].id) {
+		if (prev[i]!.id !== next[i]!.id) {
 			return false;
 		}
 	}

@@ -23,6 +23,7 @@ export function HeadingExplorer(): React.ReactElement {
 
 	const handleDragStart = useCallback(
 		(e: React.DragEvent) => {
+			/* v8 ignore next 3 -- drag bar only renders when selectionCount > 0 */
 			if (selectionCount === 0) {
 				return;
 			}

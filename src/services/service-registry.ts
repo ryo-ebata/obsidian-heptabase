@@ -27,7 +27,7 @@ export function createServices(app: App, settings: HeptabaseSettings): Services 
 	const canvasObserver = new CanvasObserver(app);
 	const backlinkWriter = new BacklinkWriter(app);
 	const quickCardCreator = new QuickCardCreator(fileCreator, canvasOperator);
-	const edgeSync = new EdgeSync(app, settings.connectionsSectionName);
+	const edgeSync = new EdgeSync(app);
 	const previewBridge = new PreviewBridge();
 
 	return {
