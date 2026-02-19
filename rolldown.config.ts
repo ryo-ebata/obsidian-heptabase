@@ -16,6 +16,11 @@ export default defineConfig({
 	resolve: {
 		tsconfigFilename: "tsconfig.json",
 	},
+	transform: {
+		define: {
+			"process.env.NODE_ENV": "'production'",
+		},
+	},
 	output: {
 		file: "main.js",
 		format: "cjs",

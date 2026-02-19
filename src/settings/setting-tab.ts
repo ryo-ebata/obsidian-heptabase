@@ -1,5 +1,5 @@
 import type { HeptabaseSettings } from "@/types/settings";
-import type { App } from "obsidian";
+import type { App, Plugin } from "obsidian";
 import { PluginSettingTab, Setting } from "obsidian";
 
 export class SettingTab extends PluginSettingTab {
@@ -8,10 +8,11 @@ export class SettingTab extends PluginSettingTab {
 
 	constructor(
 		app: App,
+		plugin: Plugin,
 		settings: HeptabaseSettings,
 		onSettingsChange: (settings: HeptabaseSettings) => void,
 	) {
-		super(app, {} as never);
+		super(app, plugin);
 		this.settings = settings;
 		this.onSettingsChange = onSettingsChange;
 	}

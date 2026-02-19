@@ -29,7 +29,7 @@ export default class HeptabasePlugin extends Plugin {
 		});
 
 		this.addSettingTab(
-			new SettingTab(this.app, this.settings, (newSettings) => {
+			new SettingTab(this.app, this, this.settings, (newSettings) => {
 				this.settings = newSettings;
 				this.fileCreator = new FileCreator(this.app, this.settings);
 				this.canvasOperator = new CanvasOperator(this.app, this.settings);
