@@ -96,4 +96,26 @@ describe("KnowledgeContextService", () => {
 
 		expect(app.vault.cachedRead).toHaveBeenCalledTimes(2);
 	});
+
+	it("shares an in-flight Canvas read between concurrent requests", async () => {
+		const app = new App();
+		const firstTarget = new TFile("first.md");
+		const secondTarget = new TFile("second.md");
+		const canvas = new TFile("board.canvas");
+		(app.vault.getFiles as Mock).mockReturnValue([canvas]);
+		(app.vault.cachedRead as Mock).mockResolvedValue(
+			JSON.stringify({
+				nodes: [
+					{ id: "first", type: "file", file: firstTarget.path },
+					{ id: "second", type: "file", file: secondTarget.path },
+				],
+				edges: [],
+			}),
+		);
+		const service = new KnowledgeContextService(app);
+
+		await Promise.all([service.getForFile(firstTarget), service.getForFile(secondTarget)]);
+
+		expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
+	});
 });

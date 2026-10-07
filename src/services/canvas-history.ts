@@ -2,7 +2,11 @@ import type { Canvas, CanvasData, CanvasEdgeData, CanvasNodeData } from "@/types
 
 interface CollectionPatch<T extends { id: string }> {
 	removeIds: string[];
-	upserts: T[];
+	upserts: Array<{
+		item: T;
+		previousId?: string;
+		nextId?: string;
+	}>;
 }
 
 interface CanvasPatch {
@@ -114,11 +118,16 @@ function createCollectionPatch<T extends { id: string }>(
 	return {
 		removeIds: source.filter((item) => !targetIds.has(item.id)).map((item) => item.id),
 		upserts: target
-			.filter((item) => {
+			.map((item, index) => ({ item, index }))
+			.filter(({ item }) => {
 				const previous = sourceById.get(item.id);
 				return !previous || JSON.stringify(previous) !== JSON.stringify(item);
 			})
-			.map(clone),
+			.map(({ item, index }) => ({
+				item: clone(item),
+				previousId: target[index - 1]?.id,
+				nextId: target[index + 1]?.id,
+			})),
 	};
 }
 
@@ -127,13 +136,22 @@ function applyCollectionPatch<T extends { id: string }>(
 	patch: CollectionPatch<T>,
 ): T[] {
 	const removed = new Set(patch.removeIds);
-	const upserts = new Map(patch.upserts.map((item) => [item.id, item]));
+	const upserts = new Map(patch.upserts.map(({ item }) => [item.id, item]));
 	const existingIds = new Set(current.map((item) => item.id));
 	const result = current
 		.filter((item) => !removed.has(item.id))
 		.map((item) => clone(upserts.get(item.id) ?? item));
-	for (const item of patch.upserts) {
-		if (!existingIds.has(item.id)) result.push(clone(item));
+	for (const { item, previousId, nextId } of patch.upserts) {
+		if (existingIds.has(item.id)) continue;
+		const nextIndex = nextId ? result.findIndex((candidate) => candidate.id === nextId) : -1;
+		if (nextIndex >= 0) {
+			result.splice(nextIndex, 0, clone(item));
+			continue;
+		}
+		const previousIndex = previousId
+			? result.findIndex((candidate) => candidate.id === previousId)
+			: -1;
+		result.splice(previousIndex >= 0 ? previousIndex + 1 : result.length, 0, clone(item));
 	}
 	return result;
 }

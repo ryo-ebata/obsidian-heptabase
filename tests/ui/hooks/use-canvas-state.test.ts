@@ -51,7 +51,7 @@ describe("useCanvasState", () => {
 			height: 80,
 			file: new TFile("Selected.md"),
 		});
-		act(() => vi.advanceTimersByTime(120));
+		act(() => vi.advanceTimersByTime(250));
 
 		expect(result.current.selectedPaths.has("Selected.md")).toBe(true);
 	});
@@ -63,7 +63,7 @@ describe("useCanvasState", () => {
 		const { result } = renderHook(() => useCanvasState(), { wrapper: createWrapper(app) });
 
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: second }]);
-		act(() => vi.advanceTimersByTime(120));
+		act(() => vi.advanceTimersByTime(250));
 
 		expect(result.current.canvasView).toBe(second);
 	});
@@ -83,7 +83,7 @@ describe("useCanvasState", () => {
 		const initialRenderCount = renderCount;
 
 		node.x = 240;
-		act(() => vi.advanceTimersByTime(120));
+		act(() => vi.advanceTimersByTime(250));
 
 		expect(result.current.selectedNodes[0]?.x).toBe(240);
 		expect(renderCount).toBeGreaterThan(initialRenderCount);

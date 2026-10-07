@@ -3,6 +3,7 @@ import type { App, TFile } from "obsidian";
 
 const FRONTMATTER_PATTERN = /^---\n[\s\S]*?\n---\n?/;
 const SEARCH_CONCURRENCY = 8;
+const MAX_INDEX_ENTRIES = 500;
 
 interface SearchIndexEntry {
 	version: string;
@@ -18,7 +19,10 @@ export class HeadingParser {
 		{ version: string; promise: Promise<SearchIndexEntry> }
 	>();
 
-	constructor(private readonly app: App) {}
+	constructor(
+		private readonly app: App,
+		private readonly maxIndexEntries = MAX_INDEX_ENTRIES,
+	) {}
 
 	invalidate(path?: string): void {
 		if (path) {
@@ -99,7 +103,11 @@ export class HeadingParser {
 	private async getIndexEntry(file: TFile): Promise<SearchIndexEntry> {
 		const version = `${file.stat.mtime}:${file.stat.size}`;
 		const cached = this.index.get(file.path);
-		if (cached?.version === version) return cached;
+		if (cached?.version === version) {
+			this.index.delete(file.path);
+			this.index.set(file.path, cached);
+			return cached;
+		}
 		const pending = this.pending.get(file.path);
 		if (pending?.version === version) return pending.promise;
 
@@ -116,7 +124,15 @@ export class HeadingParser {
 		this.pending.set(file.path, request);
 		try {
 			const entry = await promise;
-			if (this.pending.get(file.path) === request) this.index.set(file.path, entry);
+			if (this.pending.get(file.path) === request) {
+				this.index.delete(file.path);
+				this.index.set(file.path, entry);
+				while (this.index.size > this.maxIndexEntries) {
+					const oldestPath = this.index.keys().next().value;
+					if (oldestPath === undefined) break;
+					this.index.delete(oldestPath);
+				}
+			}
 			return entry;
 		} finally {
 			if (this.pending.get(file.path) === request) this.pending.delete(file.path);

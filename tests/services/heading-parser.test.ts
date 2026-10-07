@@ -289,5 +289,22 @@ describe("HeadingParser", () => {
 
 			expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
 		});
+
+		it("evicts the least recently used entry when the index reaches its limit", async () => {
+			parser = new HeadingParser(app, 2);
+			const first = new TFile("notes/first.md");
+			const second = new TFile("notes/second.md");
+			const third = new TFile("notes/third.md");
+			(app.vault.cachedRead as Mock).mockResolvedValue("content");
+
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([first, second]);
+			await parser.search("");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([second, third]);
+			await parser.search("");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([first]);
+			await parser.search("");
+
+			expect(app.vault.cachedRead).toHaveBeenCalledTimes(4);
+		});
 	});
 });

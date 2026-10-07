@@ -1,6 +1,6 @@
 import { KnowledgeContextService, type KnowledgeContext } from "@/services/knowledge-context";
 import { useApp } from "@/ui/hooks/use-app";
-import type { TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const EMPTY_CONTEXT: KnowledgeContext = { backlinks: [], canvases: [] };
@@ -37,8 +37,16 @@ export function useKnowledgeContext(file: TFile | null): KnowledgeContext {
 		};
 
 		refresh();
-		const modifyRef = app.vault.on("modify", scheduleRefresh);
-		const deleteRef = app.vault.on("delete", scheduleRefresh);
+		const handleVaultChange = (changedFile: unknown) => {
+			if (
+				changedFile instanceof TFile &&
+				(changedFile.extension === "md" || changedFile.extension === "canvas")
+			) {
+				scheduleRefresh();
+			}
+		};
+		const modifyRef = app.vault.on("modify", handleVaultChange);
+		const deleteRef = app.vault.on("delete", handleVaultChange);
 		const metadataRef = app.metadataCache.on("resolved", scheduleRefresh);
 
 		return () => {

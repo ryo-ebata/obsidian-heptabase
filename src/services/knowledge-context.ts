@@ -20,6 +20,10 @@ export class KnowledgeContextService {
 		string,
 		{ mtime: number; placements: { filePath: string; nodeId: string }[] }
 	>();
+	private readonly pendingCanvasReads = new Map<
+		string,
+		{ mtime: number; promise: Promise<{ filePath: string; nodeId: string }[]> }
+	>();
 
 	constructor(private readonly app: App) {}
 
@@ -58,14 +62,10 @@ export class KnowledgeContextService {
 				try {
 					let cached = this.canvasCache.get(canvasFile.path);
 					if (!cached || cached.mtime !== requestedMtime) {
-						const raw = await this.app.vault.cachedRead(canvasFile);
-						const data = JSON.parse(raw) as CanvasData;
-						if (!Array.isArray(data.nodes)) return [];
+						const placements = await this.readCanvasPlacements(canvasFile, requestedMtime);
 						cached = {
 							mtime: requestedMtime,
-							placements: data.nodes
-								.filter((node) => node.type === "file" && node.file)
-								.map((node) => ({ filePath: node.file!, nodeId: node.id })),
+							placements,
 						};
 						if (canvasFile.stat.mtime === requestedMtime) {
 							this.canvasCache.set(canvasFile.path, cached);
@@ -88,5 +88,30 @@ export class KnowledgeContextService {
 		);
 
 		return locations.flat().toSorted((a, b) => a.label.localeCompare(b.label));
+	}
+
+	private async readCanvasPlacements(
+		canvasFile: TFile,
+		mtime: number,
+	): Promise<{ filePath: string; nodeId: string }[]> {
+		const pending = this.pendingCanvasReads.get(canvasFile.path);
+		if (pending?.mtime === mtime) return pending.promise;
+
+		const promise = this.app.vault.cachedRead(canvasFile).then((raw) => {
+			const data = JSON.parse(raw) as CanvasData;
+			if (!Array.isArray(data.nodes)) return [];
+			return data.nodes
+				.filter((node) => node.type === "file" && node.file)
+				.map((node) => ({ filePath: node.file!, nodeId: node.id }));
+		});
+		const request = { mtime, promise };
+		this.pendingCanvasReads.set(canvasFile.path, request);
+		try {
+			return await promise;
+		} finally {
+			if (this.pendingCanvasReads.get(canvasFile.path) === request) {
+				this.pendingCanvasReads.delete(canvasFile.path);
+			}
+		}
 	}
 }

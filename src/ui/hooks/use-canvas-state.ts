@@ -21,7 +21,9 @@ export interface ActiveCanvasState {
 	selectedPaths: ReadonlySet<string>;
 }
 
-const POLL_INTERVAL = 120;
+// Canvas does not expose a stable public selection event. Keep a conservative fallback poll;
+// workspace and vault events still refresh immediately for structural changes.
+const POLL_INTERVAL = 250;
 const EMPTY_STATE: ActiveCanvasState = {
 	canvasView: null,
 	selectedNodes: [],
