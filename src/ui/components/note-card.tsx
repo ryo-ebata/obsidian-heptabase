@@ -17,9 +17,10 @@ interface NoteCardProps {
 	query?: string;
 	isInCanvas?: boolean;
 	isCanvasSelected?: boolean;
+	isHydrating?: boolean;
 }
 
-const COLLAPSED_HEADING_COUNT = 3;
+const COLLAPSED_HEADING_COUNT = 2;
 
 export const NoteCard = memo(function NoteCardInner({
 	file,
@@ -29,6 +30,7 @@ export const NoteCard = memo(function NoteCardInner({
 	query = "",
 	isInCanvas = false,
 	isCanvasSelected = false,
+	isHydrating = false,
 }: NoteCardProps): React.ReactElement {
 	const {
 		app,
@@ -190,10 +192,11 @@ export const NoteCard = memo(function NoteCardInner({
 					Canvas
 				</span>
 			)}
-			{excerpt && (
+			{(excerpt || isHydrating) && (
 				<div
 					ref={excerptRef}
-					className="heptabase-note-card__excerpt text-ob-muted text-ob-ui-small mt-1 max-h-20 overflow-hidden card-fade"
+					className={`heptabase-note-card__excerpt text-ob-muted text-ob-ui-small mt-1 max-h-20 overflow-hidden card-fade ${isHydrating && !excerpt ? "is-loading" : ""}`}
+					aria-hidden={isHydrating && !excerpt ? "true" : undefined}
 				/>
 			)}
 			{tags.length > 0 && (

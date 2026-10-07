@@ -8,6 +8,7 @@ interface NoteSearchState {
 	query: string;
 	results: SearchResult[];
 	isSearching: boolean;
+	isHydrating: boolean;
 	setQuery: (query: string) => void;
 }
 
@@ -20,6 +21,7 @@ export function useNoteSearch(): NoteSearchState {
 	const [query, setQueryState] = useState("");
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [isSearching, setIsSearching] = useState(true);
+	const [isHydrating, setIsHydrating] = useState(true);
 	const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const requestIdRef = useRef(0);
@@ -39,7 +41,10 @@ export function useNoteSearch(): NoteSearchState {
 			} catch {
 				if (mountedRef.current && requestId === requestIdRef.current) setResults([]);
 			} finally {
-				if (mountedRef.current && requestId === requestIdRef.current) setIsSearching(false);
+				if (mountedRef.current && requestId === requestIdRef.current) {
+					setIsSearching(false);
+					setIsHydrating(false);
+				}
 			}
 		},
 		[parser],
@@ -117,5 +122,5 @@ export function useNoteSearch(): NoteSearchState {
 		};
 	}, []);
 
-	return { query, results, isSearching, setQuery };
+	return { query, results, isSearching, isHydrating, setQuery };
 }

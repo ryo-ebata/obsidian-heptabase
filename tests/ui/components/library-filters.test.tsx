@@ -37,6 +37,7 @@ describe("LibraryFilters", () => {
 			/>,
 		);
 
+		fireEvent.click(screen.getByRole("button", { name: "Filter and sort cards" }));
 		expect(screen.getByRole("option", { name: "#idea" })).toBeDefined();
 		expect(screen.getByRole("option", { name: "#research" })).toBeDefined();
 		expect(screen.getByRole("option", { name: "inbox" })).toBeDefined();
@@ -60,6 +61,7 @@ describe("LibraryFilters", () => {
 			/>,
 		);
 
+		fireEvent.click(screen.getByRole("button", { name: "Filter and sort cards" }));
 		fireEvent.change(screen.getByLabelText("Filter by tag"), { target: { value: "idea" } });
 		fireEvent.change(screen.getByLabelText("Filter by folder"), {
 			target: { value: "research" },
@@ -132,7 +134,49 @@ describe("LibraryFilters", () => {
 			/>,
 		);
 
+		fireEvent.click(screen.getByRole("button", { name: "Filter and sort cards" }));
 		fireEvent.click(screen.getByRole("checkbox", { name: "Current Canvas" }));
 		expect(onCanvasOnlyChange).toHaveBeenCalledWith(true);
+	});
+
+	it("closes the popover with Escape and returns focus to the trigger", () => {
+		render(
+			<LibraryFilters
+				results={results}
+				tag=""
+				folder=""
+				sort="updated"
+				resultCount={2}
+				onTagChange={vi.fn()}
+				onFolderChange={vi.fn()}
+				onSortChange={vi.fn()}
+			/>,
+		);
+		const trigger = screen.getByRole("button", { name: "Filter and sort cards" });
+		fireEvent.click(trigger);
+		fireEvent.keyDown(screen.getByLabelText("Filter by tag"), { key: "Escape" });
+
+		expect(trigger.getAttribute("aria-expanded")).toBe("false");
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	it("closes the popover after an outside click", () => {
+		render(
+			<LibraryFilters
+				results={results}
+				tag=""
+				folder=""
+				sort="updated"
+				resultCount={2}
+				onTagChange={vi.fn()}
+				onFolderChange={vi.fn()}
+				onSortChange={vi.fn()}
+			/>,
+		);
+		const trigger = screen.getByRole("button", { name: "Filter and sort cards" });
+		fireEvent.click(trigger);
+		fireEvent.mouseDown(document.body);
+
+		expect(trigger.getAttribute("aria-expanded")).toBe("false");
 	});
 });

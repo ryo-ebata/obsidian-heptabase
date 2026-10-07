@@ -8,7 +8,7 @@ import type React from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 export function HeadingExplorer(): React.ReactElement {
-	const { query, results, isSearching, setQuery } = useNoteSearch();
+	const { query, results, isSearching, isHydrating, setQuery } = useNoteSearch();
 	const [tag, setTag] = useState("");
 	const [folder, setFolder] = useState("");
 	const [sort, setSort] = useState<LibrarySort>("updated");
@@ -83,6 +83,7 @@ export function HeadingExplorer(): React.ReactElement {
 					query={query}
 					inCanvasPaths={canvasContext.inCanvasPaths}
 					selectedPaths={canvasContext.selectedPaths}
+					isHydrating={isHydrating}
 					hasActiveFilters={query.trim() !== "" || tag !== "" || folder !== "" || canvasOnly}
 					onClearFilters={() => {
 						setQuery("");

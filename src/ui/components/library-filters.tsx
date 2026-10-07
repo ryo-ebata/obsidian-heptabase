@@ -1,7 +1,8 @@
 import type { SearchResult } from "@/types/plugin";
 import type { LibrarySort } from "@/services/library-results";
 import type React from "react";
-import { memo, useId, useMemo } from "react";
+import { memo, useCallback, useId, useMemo, useRef, useState } from "react";
+import { useClickOutside } from "@/ui/hooks/use-click-outside";
 
 interface LibraryFiltersProps {
 	results: SearchResult[];
@@ -33,6 +34,12 @@ export const LibraryFilters = memo(function LibraryFiltersInner({
 	const tagFilterId = useId();
 	const folderFilterId = useId();
 	const sortId = useId();
+	const popoverId = useId();
+	const menuRef = useRef<HTMLDivElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const [isOpen, setIsOpen] = useState(false);
+	const close = useCallback(() => setIsOpen(false), []);
+	useClickOutside(menuRef, close);
 	const { tags, folders } = useMemo(() => {
 		const tagSet = new Set<string>();
 		const folderSet = new Set<string>();
@@ -52,67 +59,86 @@ export const LibraryFilters = memo(function LibraryFiltersInner({
 				<span className="heptabase-library-filters__count" aria-live="polite">
 					{resultCount} {resultCount === 1 ? "card" : "cards"}
 				</span>
-				<details className="heptabase-library-filters__menu">
-					<summary aria-label="Filter and sort cards">
+				<div
+					ref={menuRef}
+					className={`heptabase-library-filters__menu ${isOpen ? "is-open" : ""}`}
+					onKeyDown={(event) => {
+						if (event.key !== "Escape") return;
+						event.preventDefault();
+						close();
+						triggerRef.current?.focus();
+					}}
+				>
+					<button
+						ref={triggerRef}
+						type="button"
+						className="heptabase-library-filters__trigger"
+						aria-label="Filter and sort cards"
+						aria-expanded={isOpen}
+						aria-controls={popoverId}
+						onClick={() => setIsOpen((open) => !open)}
+					>
 						<span aria-hidden="true" className="heptabase-library-filters__glyph" />
 						Refine
-					</summary>
-					<div className="heptabase-library-filters__popover">
-						<label htmlFor={tagFilterId}>Tag</label>
-						<select
-							id={tagFilterId}
-							aria-label="Filter by tag"
-							className="heptabase-field w-full min-w-0"
-							value={tag}
-							onChange={(event) => onTagChange(event.target.value)}
-						>
-							<option value="">All tags</option>
-							{tags.map((value) => (
-								<option key={value} value={value}>
-									#{value}
-								</option>
-							))}
-						</select>
-						<label htmlFor={folderFilterId}>Folder</label>
-						<select
-							id={folderFilterId}
-							aria-label="Filter by folder"
-							className="heptabase-field w-full min-w-0"
-							value={folder}
-							onChange={(event) => onFolderChange(event.target.value)}
-						>
-							<option value="">All folders</option>
-							{folders.map((value) => (
-								<option key={value} value={value}>
-									{value}
-								</option>
-							))}
-						</select>
-						<label htmlFor={sortId}>Sort</label>
-						<select
-							id={sortId}
-							aria-label="Sort cards"
-							className="heptabase-field w-full min-w-0"
-							value={sort}
-							onChange={(event) => onSortChange(event.target.value as LibrarySort)}
-						>
-							<option value="updated">Recently updated</option>
-							<option value="title-asc">Title A–Z</option>
-							<option value="title-desc">Title Z–A</option>
-						</select>
-						<span className="heptabase-library-filters__label">Scope</span>
-						<label className="heptabase-library-filters__check" htmlFor={`${sortId}-canvas`}>
-							<input
-								id={`${sortId}-canvas`}
-								type="checkbox"
-								checked={canvasOnly}
-								disabled={!hasCanvas}
-								onChange={(event) => onCanvasOnlyChange?.(event.target.checked)}
-							/>
-							Current Canvas
-						</label>
-					</div>
-				</details>
+					</button>
+					{isOpen && (
+						<div id={popoverId} className="heptabase-library-filters__popover">
+							<label htmlFor={tagFilterId}>Tag</label>
+							<select
+								id={tagFilterId}
+								aria-label="Filter by tag"
+								className="heptabase-field w-full min-w-0"
+								value={tag}
+								onChange={(event) => onTagChange(event.target.value)}
+							>
+								<option value="">All tags</option>
+								{tags.map((value) => (
+									<option key={value} value={value}>
+										#{value}
+									</option>
+								))}
+							</select>
+							<label htmlFor={folderFilterId}>Folder</label>
+							<select
+								id={folderFilterId}
+								aria-label="Filter by folder"
+								className="heptabase-field w-full min-w-0"
+								value={folder}
+								onChange={(event) => onFolderChange(event.target.value)}
+							>
+								<option value="">All folders</option>
+								{folders.map((value) => (
+									<option key={value} value={value}>
+										{value}
+									</option>
+								))}
+							</select>
+							<label htmlFor={sortId}>Sort</label>
+							<select
+								id={sortId}
+								aria-label="Sort cards"
+								className="heptabase-field w-full min-w-0"
+								value={sort}
+								onChange={(event) => onSortChange(event.target.value as LibrarySort)}
+							>
+								<option value="updated">Recently updated</option>
+								<option value="title-asc">Title A–Z</option>
+								<option value="title-desc">Title Z–A</option>
+							</select>
+							<span className="heptabase-library-filters__label">Scope</span>
+							<label className="heptabase-library-filters__check" htmlFor={`${sortId}-canvas`}>
+								<input
+									id={`${sortId}-canvas`}
+									type="checkbox"
+									checked={canvasOnly}
+									disabled={!hasCanvas}
+									onChange={(event) => onCanvasOnlyChange?.(event.target.checked)}
+								/>
+								Current Canvas
+							</label>
+						</div>
+					)}
+				</div>
 			</div>
 			{(tag || folder || sort !== "updated" || canvasOnly) && (
 				<div className="heptabase-library-filters__active" aria-label="Active filters">

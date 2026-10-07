@@ -1,7 +1,7 @@
 node_modules/
 dist/
 main.js
-styles.css
+/styles.css
 data.json
 .DS_Store
 *.js.map

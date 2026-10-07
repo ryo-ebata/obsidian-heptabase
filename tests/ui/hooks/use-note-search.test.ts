@@ -20,6 +20,7 @@ describe("useNoteSearch", () => {
 		(app.vault.cachedRead as Mock).mockResolvedValue("Some content");
 
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
+		expect(result.current.isHydrating).toBe(true);
 
 		await act(async () => {});
 
@@ -27,6 +28,7 @@ describe("useNoteSearch", () => {
 		expect(result.current.results).toHaveLength(1);
 		expect(result.current.results[0].file).toBe(file);
 		expect(result.current.results[0].excerpt).toBe("Some content");
+		expect(result.current.isHydrating).toBe(false);
 	});
 
 	it("updates the search query with setQuery", async () => {
