@@ -25,7 +25,7 @@ export class CanvasOperator {
 		subpath?: string,
 	): CanvasNode | null {
 		if (!subpath && typeof canvas.createFileNode === "function") {
-			const before = canvas.getData();
+			const before = cloneCanvasData(canvas.getData());
 			const node = canvas.createFileNode({
 				file,
 				pos: position,
@@ -39,10 +39,6 @@ export class CanvasOperator {
 			return node;
 		}
 
-		const data = canvas.getData();
-		if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
-			return null;
-		}
 		const id = generateId();
 		const newNode: {
 			id: string;
@@ -67,11 +63,7 @@ export class CanvasOperator {
 			newNode.subpath = subpath;
 		}
 
-		const before = cloneCanvasData(data);
-		data.nodes.push(newNode);
-		canvas.setData(data);
-		canvas.requestSave();
-		this.history.record(canvas, before, data);
+		if (!this.mutateCanvas(canvas, (data) => data.nodes.push(newNode) > 0)) return null;
 
 		return {
 			id,
@@ -85,29 +77,19 @@ export class CanvasOperator {
 
 	addEdgeToCanvas(canvas: Canvas, options: EdgeOptions): boolean {
 		if (options.fromNode === options.toNode) return false;
-		const data = canvas.getData();
-		if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
-			return false;
-		}
-		if (
-			!data.nodes.some((node) => node.id === options.fromNode) ||
-			!data.nodes.some((node) => node.id === options.toNode)
-		) {
-			return false;
-		}
-		if (
-			data.edges.some(
-				(edge) => edge.fromNode === options.fromNode && edge.toNode === options.toNode,
-			)
-		) {
-			return false;
-		}
-		const before = cloneCanvasData(data);
-		data.edges.push(this.buildEdgeData(options));
-		canvas.setData(data);
-		canvas.requestSave();
-		this.history.record(canvas, before, data);
-		return true;
+		return this.mutateCanvas(canvas, (data) => {
+			if (
+				!data.nodes.some((node) => node.id === options.fromNode) ||
+				!data.nodes.some((node) => node.id === options.toNode) ||
+				data.edges.some(
+					(edge) => edge.fromNode === options.fromNode && edge.toNode === options.toNode,
+				)
+			) {
+				return false;
+			}
+			data.edges.push(this.buildEdgeData(options));
+			return true;
+		});
 	}
 
 	async addEdgeViaJson(canvasFile: TFile, options: EdgeOptions): Promise<void> {
@@ -153,76 +135,67 @@ export class CanvasOperator {
 	}
 
 	addGroupToCanvas(canvas: Canvas, nodes: CanvasNode[], label?: string): boolean {
-		if (nodes.length === 0) {
-			return false;
-		}
+		if (nodes.length === 0) return false;
 
 		const padding = 20;
 		const bounds = this.computeBoundingBox(nodes);
 
-		const data = canvas.getData();
-		if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
-			return false;
-		}
-		const before = cloneCanvasData(data);
-		data.nodes.push({
-			id: generateId(),
-			type: "group",
-			label,
-			x: bounds.x - padding,
-			y: bounds.y - padding,
-			width: bounds.width + padding * 2,
-			height: bounds.height + padding * 2,
+		return this.mutateCanvas(canvas, (data) => {
+			data.nodes.push({
+				id: generateId(),
+				type: "group",
+				label,
+				x: bounds.x - padding,
+				y: bounds.y - padding,
+				width: bounds.width + padding * 2,
+				height: bounds.height + padding * 2,
+			});
+			return true;
 		});
-
-		canvas.setData(data);
-		canvas.requestSave();
-		this.history.record(canvas, before, data);
-		return true;
 	}
 
 	arrangeNodes(canvas: Canvas, nodeIds: string[], action: CanvasLayoutAction): boolean {
 		const minimumNodes = action.startsWith("align") ? 2 : 3;
 		const selectedIds = new Set(nodeIds);
-		const data = canvas.getData();
-		if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
-			return false;
-		}
+		return this.mutateCanvas(canvas, (data, before) => {
+			const nodes = data.nodes.filter((node) => selectedIds.has(node.id));
+			if (nodes.length < minimumNodes) return false;
 
-		const nodes = data.nodes.filter((node) => selectedIds.has(node.id));
-		if (nodes.length < minimumNodes) {
-			return false;
-		}
-
-		const before = cloneCanvasData(data);
-		switch (action) {
-			case "align-left": {
-				const left = Math.min(...nodes.map((node) => node.x));
-				for (const node of nodes) node.x = left;
-				break;
+			switch (action) {
+				case "align-left": {
+					const left = Math.min(...nodes.map((node) => node.x));
+					for (const node of nodes) node.x = left;
+					break;
+				}
+				case "align-top": {
+					const top = Math.min(...nodes.map((node) => node.y));
+					for (const node of nodes) node.y = top;
+					break;
+				}
+				case "distribute-horizontal":
+					this.distributeNodes(nodes, "x", "width");
+					break;
+				case "distribute-vertical":
+					this.distributeNodes(nodes, "y", "height");
+					break;
 			}
-			case "align-top": {
-				const top = Math.min(...nodes.map((node) => node.y));
-				for (const node of nodes) node.y = top;
-				break;
-			}
-			case "distribute-horizontal":
-				this.distributeNodes(nodes, "x", "width");
-				break;
-			case "distribute-vertical":
-				this.distributeNodes(nodes, "y", "height");
-				break;
-		}
 
-		if (
-			nodes.every((node) => {
+			return !nodes.every((node) => {
 				const previous = before.nodes.find((candidate) => candidate.id === node.id);
 				return previous?.x === node.x && previous.y === node.y;
-			})
-		) {
-			return false;
-		}
+			});
+		});
+	}
 
+	private mutateCanvas(
+		canvas: Canvas,
+		mutation: (data: CanvasData, before: CanvasData) => boolean,
+	): boolean {
+		const current = canvas.getData();
+		if (!Array.isArray(current.nodes) || !Array.isArray(current.edges)) return false;
+		const before = cloneCanvasData(current);
+		const data = cloneCanvasData(current);
+		if (!mutation(data, before)) return false;
 		canvas.setData(data);
 		canvas.requestSave();
 		this.history.record(canvas, before, data);

@@ -1,6 +1,6 @@
 import { KnowledgeContextService } from "@/services/knowledge-context";
 import { App, TFile } from "obsidian";
-import { type Mock, describe, expect, it } from "vitest";
+import { type Mock, describe, expect, it, vi } from "vitest";
 
 describe("KnowledgeContextService", () => {
 	it("finds backlinks and every canvas placement", async () => {
@@ -44,5 +44,56 @@ describe("KnowledgeContextService", () => {
 			backlinks: [],
 			canvases: [],
 		});
+	});
+
+	it("reuses parsed Canvas data until the file mtime changes", async () => {
+		const app = new App();
+		const target = new TFile("target.md");
+		const canvas = new TFile("board.canvas");
+		canvas.stat.mtime = 1;
+		(app.vault.getFiles as Mock).mockReturnValue([canvas]);
+		(app.vault.cachedRead as Mock).mockResolvedValue(
+			JSON.stringify({ nodes: [{ id: "node", type: "file", file: target.path }], edges: [] }),
+		);
+		const service = new KnowledgeContextService(app);
+
+		await service.getForFile(target);
+		await service.getForFile(target);
+		expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
+
+		canvas.stat.mtime = 2;
+		await service.getForFile(target);
+		expect(app.vault.cachedRead).toHaveBeenCalledTimes(2);
+	});
+
+	it("does not let an older Canvas read replace a newer cache entry", async () => {
+		const app = new App();
+		const target = new TFile("target.md");
+		const canvas = new TFile("board.canvas");
+		canvas.stat.mtime = 1;
+		(app.vault.getFiles as Mock).mockReturnValue([canvas]);
+		let resolveFirst!: (value: string) => void;
+		const firstRead = new Promise<string>((resolve) => {
+			resolveFirst = resolve;
+		});
+		vi.mocked(app.vault.cachedRead)
+			.mockReturnValueOnce(firstRead)
+			.mockResolvedValueOnce(
+				JSON.stringify({ nodes: [{ id: "new", type: "file", file: target.path }], edges: [] }),
+			);
+		const service = new KnowledgeContextService(app);
+
+		const staleRequest = service.getForFile(target);
+		canvas.stat.mtime = 2;
+		await expect(service.getForFile(target)).resolves.toMatchObject({
+			canvases: [{ nodeId: "new" }],
+		});
+		resolveFirst(
+			JSON.stringify({ nodes: [{ id: "old", type: "file", file: target.path }], edges: [] }),
+		);
+		await staleRequest;
+		await service.getForFile(target);
+
+		expect(app.vault.cachedRead).toHaveBeenCalledTimes(2);
 	});
 });

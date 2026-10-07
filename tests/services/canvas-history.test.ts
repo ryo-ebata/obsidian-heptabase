@@ -98,6 +98,27 @@ describe("CanvasHistory", () => {
 		expect(history.redo(canvas)).toBe(false);
 	});
 
+	it("preserves unrelated Canvas changes when applying a history delta", () => {
+		const history = new CanvasHistory();
+		const { canvas, data } = createCanvas();
+		history.record(
+			canvas,
+			{ nodes: [], edges: [] },
+			{
+				nodes: [{ id: "plugin-node", type: "text", x: 0, y: 0, width: 10, height: 10 }],
+				edges: [],
+			},
+		);
+		data.nodes = [
+			{ id: "plugin-node", type: "text", x: 0, y: 0, width: 10, height: 10 },
+			{ id: "native-node", type: "text", x: 20, y: 0, width: 10, height: 10 },
+		];
+
+		history.undo(canvas);
+
+		expect(data.nodes.map((node) => node.id)).toEqual(["native-node"]);
+	});
+
 	it("bounds memory usage to the latest 100 changes", () => {
 		const history = new CanvasHistory();
 		const { canvas } = createCanvas();

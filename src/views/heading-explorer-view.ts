@@ -1,5 +1,6 @@
 import type { HeptabaseSettings } from "@/types/settings";
 import { CanvasOperator } from "@/services/canvas-operator";
+import { CanvasObserver } from "@/services/canvas-observer";
 import { SidebarContainer, type SidebarContainerHandle } from "@/ui/components/sidebar-container";
 import type { PluginContextValue } from "@/ui/context";
 import { PluginContext } from "@/ui/context";
@@ -19,6 +20,7 @@ export class HeadingExplorerView extends ItemView {
 		private readonly appInstance: App,
 		private readonly settings: HeptabaseSettings,
 		private readonly canvasOperator = new CanvasOperator(appInstance, settings),
+		private readonly canvasObserver = new CanvasObserver(appInstance),
 	) {
 		super(leaf);
 	}
@@ -44,6 +46,7 @@ export class HeadingExplorerView extends ItemView {
 			app: this.appInstance,
 			settings: this.settings,
 			canvasOperator: this.canvasOperator,
+			canvasObserver: this.canvasObserver,
 		};
 
 		this.root = createRoot(container);

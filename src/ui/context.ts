@@ -1,5 +1,6 @@
 import type { HeptabaseSettings } from "@/types/settings";
 import type { CanvasOperator } from "@/services/canvas-operator";
+import type { CanvasObserver } from "@/services/canvas-observer";
 import type { App } from "obsidian";
 import { createContext } from "react";
 
@@ -7,6 +8,7 @@ export interface PluginContextValue {
 	app: App;
 	settings: HeptabaseSettings;
 	canvasOperator?: CanvasOperator;
+	canvasObserver?: CanvasObserver;
 }
 
 export const PluginContext = createContext<PluginContextValue | null>(null);

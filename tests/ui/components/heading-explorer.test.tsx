@@ -1,6 +1,7 @@
 import { HeadingExplorer } from "@/ui/components/heading-explorer";
 import type { PluginContextValue } from "@/ui/context";
 import { PluginContext } from "@/ui/context";
+import { CanvasStateProvider } from "@/ui/hooks/use-canvas-state";
 import { render, screen } from "@testing-library/react";
 import { App } from "obsidian";
 import React from "react";
@@ -34,7 +35,9 @@ function renderWithContext() {
 	};
 	return render(
 		<PluginContext.Provider value={contextValue}>
-			<HeadingExplorer />
+			<CanvasStateProvider>
+				<HeadingExplorer />
+			</CanvasStateProvider>
 		</PluginContext.Provider>,
 	);
 }

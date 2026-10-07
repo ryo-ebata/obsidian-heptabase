@@ -134,55 +134,30 @@ export const ArticleViewerPanel = forwardRef<ArticleViewerPanelHandle>(
 			[app.fileManager, selectedFile, refreshContent],
 		);
 
+		const updateProperty = useCallback(
+			async (key: string, value: unknown, action: "set" | "delete" = "set") => {
+				if (!selectedFile) {
+					return;
+				}
+				try {
+					await app.fileManager.processFrontMatter(selectedFile, (fm) => {
+						if (action === "delete") delete fm[key];
+						else fm[key] = value;
+					});
+					refreshContent();
+				} catch (error) {
+					notifyError(`Property ${action === "delete" ? "delete" : "update"} failed`, error);
+				}
+			},
+			[app.fileManager, selectedFile, refreshContent],
+		);
 		const handlePropertyChange = useCallback(
-			async (key: string, value: unknown) => {
-				if (!selectedFile) {
-					return;
-				}
-				try {
-					await app.fileManager.processFrontMatter(selectedFile, (fm) => {
-						fm[key] = value;
-					});
-					refreshContent();
-				} catch (error) {
-					notifyError("Property update failed", error);
-				}
-			},
-			[app.fileManager, selectedFile, refreshContent],
+			(key: string, value: unknown) => updateProperty(key, value),
+			[updateProperty],
 		);
-
 		const handlePropertyDelete = useCallback(
-			async (key: string) => {
-				if (!selectedFile) {
-					return;
-				}
-				try {
-					await app.fileManager.processFrontMatter(selectedFile, (fm) => {
-						delete fm[key];
-					});
-					refreshContent();
-				} catch (error) {
-					notifyError("Property delete failed", error);
-				}
-			},
-			[app.fileManager, selectedFile, refreshContent],
-		);
-
-		const handlePropertyAdd = useCallback(
-			async (key: string, value: unknown) => {
-				if (!selectedFile) {
-					return;
-				}
-				try {
-					await app.fileManager.processFrontMatter(selectedFile, (fm) => {
-						fm[key] = value;
-					});
-					refreshContent();
-				} catch (error) {
-					notifyError("Property add failed", error);
-				}
-			},
-			[app.fileManager, selectedFile, refreshContent],
+			(key: string) => updateProperty(key, undefined, "delete"),
+			[updateProperty],
 		);
 
 		const sourcePath = asString(metadata?.frontmatter["heptabase-source"]);
@@ -203,7 +178,7 @@ export const ArticleViewerPanel = forwardRef<ArticleViewerPanelHandle>(
 							onRename={handleRename}
 							onPropertyChange={handlePropertyChange}
 							onPropertyDelete={handlePropertyDelete}
-							onPropertyAdd={handlePropertyAdd}
+							onPropertyAdd={handlePropertyChange}
 						/>
 						<ArticleEditor
 							content={articleContent.body}

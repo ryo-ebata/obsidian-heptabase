@@ -12,6 +12,17 @@ describe("HeadingParser", () => {
 	});
 
 	describe("search", () => {
+		it("lists note metadata immediately without reading content", () => {
+			const file = new TFile("notes/immediate.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+
+			const result = parser.list();
+
+			expect(result[0]?.file).toBe(file);
+			expect(result[0]?.excerpt).toBe("");
+			expect(app.vault.cachedRead).not.toHaveBeenCalled();
+		});
+
 		it("returns all files for an empty query with excerpts", async () => {
 			const file1 = new TFile("notes/with-content.md");
 			const file2 = new TFile("notes/empty.md");
@@ -135,7 +146,7 @@ describe("HeadingParser", () => {
 		it("does not match content that exists only inside a fenced code block", async () => {
 			const file = new TFile("notes/code-only.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.read as Mock).mockResolvedValue("Intro\n\n```ts\nsecretNeedle()\n```");
+			(app.vault.cachedRead as Mock).mockResolvedValue("Intro\n\n```ts\nsecretNeedle()\n```");
 
 			const result = await parser.search("secretNeedle");
 
@@ -145,7 +156,7 @@ describe("HeadingParser", () => {
 		it("keeps nearby body copy when a search matches a heading", async () => {
 			const file = new TFile("notes/structured.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.read as Mock).mockResolvedValue(
+			(app.vault.cachedRead as Mock).mockResolvedValue(
 				"Intro copy\n## Spatial context\nExplanation below the heading",
 			);
 
@@ -159,7 +170,6 @@ describe("HeadingParser", () => {
 			const file2 = new TFile("notes/world.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file1, file2]);
 			(app.vault.cachedRead as Mock).mockResolvedValue("content");
-			(app.vault.read as Mock).mockResolvedValue("");
 
 			const result = await parser.search("hello");
 
@@ -172,13 +182,12 @@ describe("HeadingParser", () => {
 			const file2 = new TFile("notes/beta.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file1, file2]);
 
-			(app.vault.read as Mock).mockImplementation((file: TFile) => {
+			(app.vault.cachedRead as Mock).mockImplementation((file: TFile) => {
 				if (file.path === "notes/alpha.md") {
 					return Promise.resolve("This note contains special keyword in the body.");
 				}
 				return Promise.resolve("Nothing relevant here.");
 			});
-			(app.vault.cachedRead as Mock).mockResolvedValue("content");
 
 			const result = await parser.search("special keyword");
 
@@ -186,7 +195,7 @@ describe("HeadingParser", () => {
 			expect(result[0].file).toBe(file1);
 		});
 
-		it("does not read file content when already matched by title", async () => {
+		it("reads indexed file content only once when matched by title", async () => {
 			const file = new TFile("notes/matching-title.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
 			(app.vault.cachedRead as Mock).mockResolvedValue("content");
@@ -194,13 +203,13 @@ describe("HeadingParser", () => {
 			const result = await parser.search("matching");
 
 			expect(result).toHaveLength(1);
-			expect(app.vault.read).not.toHaveBeenCalled();
+			expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
 		});
 
 		it("returns empty array when nothing matches", async () => {
 			const file = new TFile("notes/hello.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.read as Mock).mockResolvedValue("some content");
+			(app.vault.cachedRead as Mock).mockResolvedValue("some content");
 
 			const result = await parser.search("xyz");
 
@@ -221,7 +230,7 @@ describe("HeadingParser", () => {
 		it("returns excerpt from content when matched by body", async () => {
 			const file = new TFile("notes/body-match.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-			(app.vault.read as Mock).mockResolvedValue("Line one\nLine two\nLine three\nLine four");
+			(app.vault.cachedRead as Mock).mockResolvedValue("Line one\nLine two\nLine three\nLine four");
 
 			const result = await parser.search("line two");
 
@@ -233,7 +242,7 @@ describe("HeadingParser", () => {
 			const readable = new TFile("notes/readable.md");
 			const unreadable = new TFile("notes/unreadable.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([readable, unreadable]);
-			(app.vault.read as Mock).mockImplementation((file: TFile) =>
+			(app.vault.cachedRead as Mock).mockImplementation((file: TFile) =>
 				file === unreadable ? Promise.reject(new Error("read failed")) : Promise.resolve("keyword"),
 			);
 
@@ -255,6 +264,30 @@ describe("HeadingParser", () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0]?.file).toBe(readable);
+		});
+
+		it("reuses indexed content until the file is invalidated", async () => {
+			const file = new TFile("notes/indexed.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue("alpha beta");
+
+			await parser.search("");
+			await parser.search("beta");
+			expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
+
+			parser.invalidate(file.path);
+			await parser.search("beta");
+			expect(app.vault.cachedRead).toHaveBeenCalledTimes(2);
+		});
+
+		it("shares an in-flight index read between concurrent searches", async () => {
+			const file = new TFile("notes/concurrent.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue("alpha beta");
+
+			await Promise.all([parser.search(""), parser.search("beta")]);
+
+			expect(app.vault.cachedRead).toHaveBeenCalledTimes(1);
 		});
 	});
 });

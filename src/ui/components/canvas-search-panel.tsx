@@ -2,8 +2,7 @@ import { CanvasSearch } from "@/services/canvas-search";
 import { CanvasOperator } from "@/services/canvas-operator";
 import { CanvasLayoutToolbar } from "@/ui/components/canvas-layout-toolbar";
 import { useApp } from "@/ui/hooks/use-app";
-import { useCanvasSelection } from "@/ui/hooks/use-canvas-selection";
-import { useCanvasView } from "@/ui/hooks/use-canvas-view";
+import { useActiveCanvasState } from "@/ui/hooks/use-canvas-state";
 import type React from "react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -16,8 +15,7 @@ const KIND_LABELS = {
 
 export function CanvasSearchPanel(): React.ReactElement {
 	const { app, settings, canvasOperator: sharedCanvasOperator } = useApp();
-	const canvasView = useCanvasView();
-	const selectedNodes = useCanvasSelection(canvasView);
+	const { canvasView, selectedNodes } = useActiveCanvasState();
 	const search = useMemo(() => new CanvasSearch(), []);
 	const canvasOperator = useMemo(
 		() => sharedCanvasOperator ?? new CanvasOperator(app, settings),

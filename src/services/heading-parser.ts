@@ -4,53 +4,62 @@ import type { App, TFile } from "obsidian";
 const FRONTMATTER_PATTERN = /^---\n[\s\S]*?\n---\n?/;
 const SEARCH_CONCURRENCY = 8;
 
-export class HeadingParser {
-	private app: App;
+interface SearchIndexEntry {
+	version: string;
+	content: string;
+	searchableLower: string;
+	excerpt: string;
+}
 
-	constructor(app: App) {
-		this.app = app;
+export class HeadingParser {
+	private readonly index = new Map<string, SearchIndexEntry>();
+	private readonly pending = new Map<
+		string,
+		{ version: string; promise: Promise<SearchIndexEntry> }
+	>();
+
+	constructor(private readonly app: App) {}
+
+	invalidate(path?: string): void {
+		if (path) {
+			this.index.delete(path);
+			this.pending.delete(path);
+		} else {
+			this.index.clear();
+			this.pending.clear();
+		}
+	}
+
+	list(): SearchResult[] {
+		return this.app.vault
+			.getMarkdownFiles()
+			.map((file) => this.buildResult(file, this.index.get(file.path)?.excerpt ?? ""));
 	}
 
 	async search(query: string): Promise<SearchResult[]> {
 		const files = this.app.vault.getMarkdownFiles();
 		const normalizedQuery = query.trim();
-
-		if (normalizedQuery === "") {
-			const results = await mapWithConcurrency(
-				files,
-				SEARCH_CONCURRENCY,
-				async (file): Promise<SearchResult | null> => {
-					try {
-						const excerpt = await this.getExcerpt(file);
-						return this.buildResult(file, excerpt);
-					} catch {
-						// A single unreadable note must not break the entire library.
-						return null;
-					}
-				},
-			);
-			return results.filter((result): result is SearchResult => result !== null);
+		const livePaths = new Set(files.map((file) => file.path));
+		for (const path of this.index.keys()) {
+			if (!livePaths.has(path)) this.index.delete(path);
 		}
-
-		const lowerQuery = normalizedQuery.toLowerCase();
 
 		const matched = await mapWithConcurrency(
 			files,
 			SEARCH_CONCURRENCY,
 			async (file: TFile): Promise<SearchResult | null> => {
 				try {
-					if (file.basename.toLowerCase().includes(lowerQuery)) {
-						const excerpt = await this.getExcerpt(file, normalizedQuery);
-						return this.buildResult(file, excerpt);
-					}
-
-					const content = await this.app.vault.read(file);
-					const searchableContent = prepareExcerptContent(content);
-					if (searchableContent.toLowerCase().includes(lowerQuery)) {
-						const excerpt = this.extractExcerpt(content, normalizedQuery);
-						return this.buildResult(file, excerpt);
+					const entry = await this.getIndexEntry(file);
+					if (normalizedQuery === "") return this.buildResult(file, entry.excerpt);
+					const lowerQuery = normalizedQuery.toLocaleLowerCase();
+					if (
+						file.basename.toLocaleLowerCase().includes(lowerQuery) ||
+						entry.searchableLower.includes(lowerQuery)
+					) {
+						return this.buildResult(file, this.extractExcerpt(entry.content, normalizedQuery));
 					}
 				} catch {
+					// A single unreadable note must not break the entire library.
 					return null;
 				}
 
@@ -87,9 +96,31 @@ export class HeadingParser {
 		return [...new Set([...inlineTags, ...frontmatterTags])].toSorted((a, b) => a.localeCompare(b));
 	}
 
-	private async getExcerpt(file: TFile, query?: string): Promise<string> {
-		const content = await this.app.vault.cachedRead(file);
-		return this.extractExcerpt(content, query);
+	private async getIndexEntry(file: TFile): Promise<SearchIndexEntry> {
+		const version = `${file.stat.mtime}:${file.stat.size}`;
+		const cached = this.index.get(file.path);
+		if (cached?.version === version) return cached;
+		const pending = this.pending.get(file.path);
+		if (pending?.version === version) return pending.promise;
+
+		const promise = this.app.vault.cachedRead(file).then((content) => {
+			const searchableContent = prepareExcerptContent(content);
+			return {
+				version,
+				content,
+				searchableLower: searchableContent.toLocaleLowerCase(),
+				excerpt: this.extractExcerpt(content),
+			};
+		});
+		const request = { version, promise };
+		this.pending.set(file.path, request);
+		try {
+			const entry = await promise;
+			if (this.pending.get(file.path) === request) this.index.set(file.path, entry);
+			return entry;
+		} finally {
+			if (this.pending.get(file.path) === request) this.pending.delete(file.path);
+		}
 	}
 
 	private extractExcerpt(content: string, query?: string): string {

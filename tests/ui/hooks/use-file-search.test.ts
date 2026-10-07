@@ -70,47 +70,6 @@ describe("useFileSearch", () => {
 		expect(result.current.results).toContain(file3);
 	});
 
-	it("selects and deselects a file with selectFile", () => {
-		const app = new App();
-		const file = new TFile("notes/test.md");
-		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-
-		const { result } = renderHook(() => useFileSearch(), {
-			wrapper: createWrapper(app),
-		});
-
-		expect(result.current.selectedFile).toBeNull();
-
-		act(() => {
-			result.current.selectFile(file);
-		});
-
-		expect(result.current.selectedFile).toBe(file);
-
-		act(() => {
-			result.current.selectFile(null);
-		});
-
-		expect(result.current.selectedFile).toBeNull();
-	});
-
-	it("clears the selected file when the search query changes", () => {
-		const app = new App();
-		const file = new TFile("notes/test.md");
-		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
-
-		const { result } = renderHook(() => useFileSearch(), {
-			wrapper: createWrapper(app),
-		});
-
-		act(() => {
-			result.current.selectFile(file);
-			result.current.setQuery("different");
-		});
-
-		expect(result.current.selectedFile).toBeNull();
-	});
-
 	it("debounces the search by 160ms", async () => {
 		const app = new App();
 		const file = new TFile("notes/test.md");

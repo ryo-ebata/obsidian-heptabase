@@ -336,11 +336,15 @@ describe("NoteCard", () => {
 
 	it("adds file to canvas via context menu", () => {
 		const app = new App();
+		const canvasData = { nodes: [], edges: [] };
 		const mockCanvas = {
 			tx: 0,
 			ty: 0,
 			tZoom: 1,
-			createFileNode: vi.fn(),
+			getData: vi.fn(() => canvasData),
+			setData: vi.fn(),
+			requestSave: vi.fn(),
+			createFileNode: vi.fn(() => ({ id: "new-node" })),
 		};
 		(app.workspace.getLeavesOfType as Mock).mockReturnValue([{ view: { canvas: mockCanvas } }]);
 

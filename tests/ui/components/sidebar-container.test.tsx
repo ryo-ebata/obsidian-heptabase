@@ -28,6 +28,14 @@ describe("SidebarContainer", () => {
 		);
 	});
 
+	it("shares one Canvas polling loop across all mounted tabs", () => {
+		const setIntervalSpy = vi.spyOn(window, "setInterval");
+		render(<SidebarContainer />, { wrapper: createWrapper(app) });
+
+		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+		setIntervalSpy.mockRestore();
+	});
+
 	it("switches tabs with horizontal keyboard navigation", () => {
 		const { container } = render(<SidebarContainer />, { wrapper: createWrapper(app) });
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Card Library" }), { key: "ArrowRight" });

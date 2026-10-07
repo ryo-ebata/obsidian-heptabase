@@ -1,25 +1,13 @@
 import { ContentExtractor } from "@/services/content-extractor";
+import { CanvasObserver } from "@/services/canvas-observer";
+import { CanvasOperator } from "@/services/canvas-operator";
 import type { NoteDragData, ParsedHeading, TextSelectionDragData } from "@/types/plugin";
 import { useApp } from "@/ui/hooks/use-app";
 import { useDragData } from "@/ui/hooks/use-drag-data";
 import { useSidebarActions } from "@/ui/hooks/use-sidebar-actions";
 import { Component, MarkdownRenderer, Menu, Notice, type TFile } from "obsidian";
 import type React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-
-interface CanvasView {
-	canvas?: {
-		tx: number;
-		ty: number;
-		tZoom: number;
-		createFileNode: (opts: {
-			file: TFile;
-			pos: { x: number; y: number };
-			size: { width: number; height: number };
-			save: boolean;
-		}) => void;
-	};
-}
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface NoteCardProps {
 	file: TFile;
@@ -42,8 +30,21 @@ export const NoteCard = memo(function NoteCardInner({
 	isInCanvas = false,
 	isCanvasSelected = false,
 }: NoteCardProps): React.ReactElement {
-	const { app, settings } = useApp();
+	const {
+		app,
+		settings,
+		canvasOperator: sharedCanvasOperator,
+		canvasObserver: sharedCanvasObserver,
+	} = useApp();
 	const { openInArticle } = useSidebarActions();
+	const canvasObserver = useMemo(
+		() => sharedCanvasObserver ?? new CanvasObserver(app),
+		[app, sharedCanvasObserver],
+	);
+	const canvasOperator = useMemo(
+		() => sharedCanvasOperator ?? new CanvasOperator(app, settings),
+		[app, settings, sharedCanvasOperator],
+	);
 	const excerptRef = useRef<HTMLDivElement>(null);
 	const [content, setContent] = useState("");
 	const [headingsExpanded, setHeadingsExpanded] = useState(false);
@@ -126,9 +127,8 @@ export const NoteCard = memo(function NoteCardInner({
 					.setTitle("Add to Canvas")
 					.setIcon("layout-dashboard")
 					.onClick(() => {
-						const canvasLeaves = app.workspace.getLeavesOfType("canvas");
-						const canvasView = canvasLeaves[0]?.view as CanvasView | undefined;
-						if (!canvasView?.canvas) {
+						const canvasView = canvasObserver.getActiveCanvasView();
+						if (!canvasView) {
 							new Notice("No canvas is open");
 							return;
 						}
@@ -137,16 +137,9 @@ export const NoteCard = memo(function NoteCardInner({
 							x: Math.round(-canvas.tx / canvas.tZoom),
 							y: Math.round(-canvas.ty / canvas.tZoom),
 						};
-						canvas.createFileNode({
-							file,
-							pos: position,
-							size: {
-								width: settings.defaultNodeWidth,
-								height: settings.defaultNodeHeight,
-							},
-							save: true,
-						});
-						new Notice(`Added "${file.basename}" to Canvas`);
+						if (canvasOperator.addNodeToCanvas(canvas, file, position)) {
+							new Notice(`Added "${file.basename}" to Canvas`);
+						}
 					});
 			});
 			menu.addItem((item) => {
@@ -159,7 +152,7 @@ export const NoteCard = memo(function NoteCardInner({
 			});
 			menu.showAtMouseEvent(e.nativeEvent);
 		},
-		[app.workspace, file, settings.defaultNodeWidth, settings.defaultNodeHeight, openInArticle],
+		[canvasObserver, canvasOperator, file, openInArticle],
 	);
 
 	const className = `heptabase-note-card p-2 rounded border border-ob-border-subtle cursor-grab ${isDragging ? "is-dragging" : ""} ${isInCanvas ? "is-in-canvas" : ""} ${isCanvasSelected ? "is-canvas-selected" : ""}`;
