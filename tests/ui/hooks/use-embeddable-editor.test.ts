@@ -296,5 +296,29 @@ describe("useEmbeddableEditor", () => {
 
 			expect(onSave).not.toHaveBeenCalled();
 		});
+
+		it("cancels the pending debounce save when blur saves immediately", () => {
+			const container = document.createElement("div");
+			const onSave = vi.fn();
+			let options: EmbeddableEditorOptions | undefined;
+			(createEmbeddableEditor as Mock).mockImplementation(
+				(_app: App, _container: HTMLElement, captured: EmbeddableEditorOptions) => {
+					options = captured;
+					return mockEditor;
+				},
+			);
+			renderHook(
+				() => useEmbeddableEditor({ content: "# Hello", onSave, _containerOverride: container }),
+				{ wrapper: createWrapper(app) },
+			);
+			const changedEditor = { ...mockEditor, value: "# Changed" };
+
+			options!.onChange!(changedEditor);
+			options!.onBlur!(changedEditor);
+			vi.advanceTimersByTime(300);
+
+			expect(onSave).toHaveBeenCalledTimes(1);
+			expect(onSave).toHaveBeenCalledWith("# Changed");
+		});
 	});
 });

@@ -51,6 +51,7 @@ export function useEmbeddableEditor({
 		const options: EmbeddableEditorOptions = {
 			value: contentRef.current,
 			onBlur: (editor: EmbeddableEditorHandle) => {
+				clearTimeout(debounceTimerRef.current);
 				void Promise.resolve(onSaveRef.current(editor.value)).catch((error) => {
 					notifyError("Save failed", error);
 				});

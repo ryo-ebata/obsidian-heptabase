@@ -24,7 +24,6 @@ interface ScrollableMarkdownEditorInstance {
 	unload: () => void;
 	_loaded: boolean;
 	owner: Record<string, unknown>;
-	activeCM: { hasFocus: boolean };
 	register: (uninstaller: () => void) => void;
 	containerEl: HTMLElement;
 }
@@ -35,25 +34,63 @@ type ScrollableMarkdownEditorConstructor = new (
 	options: Record<string, unknown>,
 ) => ScrollableMarkdownEditorInstance;
 
-// --- around helper (replaces monkey-around) ---
+interface WorkspaceFocusGuard {
+	original: (...args: unknown[]) => unknown;
+	wrapper: (...args: unknown[]) => unknown;
+	instances: Set<ScrollableMarkdownEditorInstance>;
+	focusedInstances: Set<ScrollableMarkdownEditorInstance>;
+}
 
-function around<T extends Record<string, unknown>>(
-	obj: T,
-	patches: Record<
-		string,
-		(original: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown
-	>,
-): () => void {
-	const originals: Record<string, unknown> = {};
-	for (const key of Object.keys(patches)) {
-		originals[key] = obj[key];
-		const wrapper = patches[key]!(obj[key] as (...args: unknown[]) => unknown);
-		(obj as Record<string, unknown>)[key] = wrapper;
-	}
-	return () => {
-		for (const key of Object.keys(originals)) {
-			(obj as Record<string, unknown>)[key] = originals[key];
+const workspaceFocusGuards = new WeakMap<object, WorkspaceFocusGuard>();
+
+interface WorkspaceFocusRegistration {
+	setFocused: (focused: boolean) => void;
+	unregister: () => void;
+}
+
+function registerWorkspaceFocusGuard(
+	app: App,
+	instance: ScrollableMarkdownEditorInstance,
+): WorkspaceFocusRegistration {
+	const workspace = app.workspace as unknown as Record<string, unknown>;
+	let guard = workspaceFocusGuards.get(app.workspace);
+	if (!guard) {
+		const original = workspace.setActiveLeaf;
+		if (typeof original !== "function") {
+			return { setFocused: () => {}, unregister: () => {} };
 		}
+		guard = {
+			original: original as (...args: unknown[]) => unknown,
+			wrapper: () => undefined,
+			instances: new Set(),
+			focusedInstances: new Set(),
+		};
+		const currentGuard = guard;
+		guard.wrapper = (...args: unknown[]) => {
+			if (currentGuard.focusedInstances.size > 0) return;
+			return currentGuard.original.call(app.workspace, ...args);
+		};
+		workspace.setActiveLeaf = guard.wrapper;
+		workspaceFocusGuards.set(app.workspace, guard);
+	}
+
+	guard.instances.add(instance);
+	let registered = true;
+	return {
+		setFocused: (focused) => {
+			if (!registered) return;
+			if (focused) guard!.focusedInstances.add(instance);
+			else guard!.focusedInstances.delete(instance);
+		},
+		unregister: () => {
+			if (!registered) return;
+			registered = false;
+			guard!.focusedInstances.delete(instance);
+			guard!.instances.delete(instance);
+			if (guard!.instances.size > 0) return;
+			if (workspace.setActiveLeaf === guard!.wrapper) workspace.setActiveLeaf = guard!.original;
+			workspaceFocusGuards.delete(app.workspace);
+		},
 	};
 }
 
@@ -67,21 +104,33 @@ function resolveEditorPrototype(app: App): ScrollableMarkdownEditorConstructor {
 	}
 
 	// @ts-expect-error — accessing internal Obsidian API
-	const embedFn = app.embedRegistry.embedByExtension.md;
-	const widgetEditorView: InternalWidgetEditorView = embedFn(
-		{ app, containerEl: document.createElement("div") },
-		null,
-		"",
-	);
+	const embedFn = app.embedRegistry?.embedByExtension?.md;
+	if (typeof embedFn !== "function") {
+		throw new Error("Obsidian's Markdown editor API is unavailable");
+	}
 
-	widgetEditorView.editable = true;
-	widgetEditorView.showEditor();
+	let widgetEditorView: InternalWidgetEditorView | null = null;
+	try {
+		const resolvedView = embedFn(
+			{ app, containerEl: document.createElement("div") },
+			null,
+			"",
+		) as InternalWidgetEditorView;
+		widgetEditorView = resolvedView;
+		resolvedView.editable = true;
+		resolvedView.showEditor();
+		const parentPrototype = Object.getPrototypeOf(resolvedView.editMode);
+		const prototype = parentPrototype && Object.getPrototypeOf(parentPrototype);
+		if (!prototype || typeof prototype.constructor !== "function") {
+			throw new Error("Obsidian's Markdown editor prototype could not be resolved");
+		}
+		EditorPrototype = prototype.constructor as ScrollableMarkdownEditorConstructor;
+	} catch (error) {
+		throw new Error("Failed to initialize the embedded Markdown editor", { cause: error });
+	} finally {
+		widgetEditorView?.unload();
+	}
 
-	const proto = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode));
-
-	widgetEditorView.unload();
-
-	EditorPrototype = proto.constructor as ScrollableMarkdownEditorConstructor;
 	return EditorPrototype;
 }
 
@@ -123,18 +172,9 @@ export function createEmbeddableEditor(
 		instance.set(options.value);
 	}
 
-	// Patch workspace.setActiveLeaf so it doesn't steal focus from our editor
-	instance.register(
-		around(app.workspace as unknown as Record<string, unknown>, {
-			setActiveLeaf:
-				(oldMethod: (...args: unknown[]) => unknown) =>
-				(...args: unknown[]) => {
-					if (!instance.activeCM.hasFocus) {
-						oldMethod.call(app.workspace, ...args);
-					}
-				},
-		}),
-	);
+	// Guard workspace focus with one shared patch, even when several editors coexist.
+	const workspaceFocus = registerWorkspaceFocusGuard(app, instance);
+	instance.register(workspaceFocus.unregister);
 
 	// Override buildLocalExtensions to add our extensions
 	const originalBuild = instance.buildLocalExtensions.bind(instance);
@@ -163,16 +203,6 @@ export function createEmbeddableEditor(
 		return extensions;
 	};
 
-	// Set up blur handler
-	if (options.onBlur) {
-		const blurCallback = options.onBlur;
-		instance.editor.cm.contentDOM.addEventListener("blur", () => {
-			if (instance._loaded) {
-				blurCallback(handle);
-			}
-		});
-	}
-
 	// Set up change handler
 	if (options.onChange) {
 		const changeCallback = options.onChange;
@@ -187,11 +217,41 @@ export function createEmbeddableEditor(
 
 	// Focus management
 	const appScope = app.keymap;
-	instance.editor.cm.contentDOM.addEventListener("focusin", () => {
-		if (appScope?.pushScope) {
-			appScope.pushScope(instance as unknown as Scope);
+	const editorOwner = instance.owner as unknown as MarkdownFileInfo;
+	let previousActiveEditor: MarkdownFileInfo | null = null;
+	let scopeActive = false;
+	const activate = (): void => {
+		workspaceFocus.setFocused(true);
+		if (!scopeActive) {
+			appScope?.pushScope?.(instance as unknown as Scope);
+			scopeActive = true;
 		}
-		app.workspace.activeEditor = instance.owner as unknown as MarkdownFileInfo;
+		if (app.workspace.activeEditor !== editorOwner) {
+			previousActiveEditor = app.workspace.activeEditor;
+			app.workspace.activeEditor = editorOwner;
+		}
+	};
+	const deactivate = (): void => {
+		workspaceFocus.setFocused(false);
+		if (scopeActive) {
+			appScope?.popScope?.(instance as unknown as Scope);
+			scopeActive = false;
+		}
+		if (app.workspace.activeEditor === editorOwner) {
+			app.workspace.activeEditor = previousActiveEditor;
+		}
+		previousActiveEditor = null;
+	};
+	const handleBlur = (): void => {
+		deactivate();
+		if (instance._loaded) options.onBlur?.(handle);
+	};
+	instance.editor.cm.contentDOM.addEventListener("focusin", activate);
+	instance.editor.cm.contentDOM.addEventListener("blur", handleBlur);
+	instance.register(() => {
+		instance.editor.cm.contentDOM.removeEventListener("focusin", activate);
+		instance.editor.cm.contentDOM.removeEventListener("blur", handleBlur);
+		deactivate();
 	});
 
 	if (options.cls) {
@@ -218,10 +278,7 @@ export function createEmbeddableEditor(
 			if (instance._loaded) {
 				instance.unload();
 			}
-			if (appScope?.popScope) {
-				appScope.popScope(instance as unknown as Scope);
-			}
-			app.workspace.activeEditor = null;
+			deactivate();
 			container.innerHTML = "";
 		},
 	};
