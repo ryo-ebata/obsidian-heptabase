@@ -2,28 +2,37 @@ import type { TFile } from "obsidian";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "./use-app";
 
+const SEARCH_DEBOUNCE_MS = 160;
+
 interface UseFileSearchReturn {
 	query: string;
 	setQuery: (q: string) => void;
 	results: TFile[];
 	selectedFile: TFile | null;
 	selectFile: (file: TFile | null) => void;
+	searchSettled: boolean;
 }
 
 export function useFileSearch(): UseFileSearchReturn {
 	const { app } = useApp();
 	const [query, setQuery] = useState("");
 	const [debouncedQuery, setDebouncedQuery] = useState("");
+	const [searchSettled, setSearchSettled] = useState(true);
 	const [selectedFile, setSelectedFile] = useState<TFile | null>(null);
 
 	useEffect(() => {
-		if (query === "") {
+		setSelectedFile(null);
+		const normalizedQuery = query.trim();
+		if (normalizedQuery === "") {
 			setDebouncedQuery("");
+			setSearchSettled(true);
 			return;
 		}
+		setSearchSettled(false);
 		const timer = setTimeout(() => {
-			setDebouncedQuery(query);
-		}, 300);
+			setDebouncedQuery(normalizedQuery);
+			setSearchSettled(true);
+		}, SEARCH_DEBOUNCE_MS);
 		return () => {
 			clearTimeout(timer);
 		};
@@ -42,5 +51,5 @@ export function useFileSearch(): UseFileSearchReturn {
 		setSelectedFile(file);
 	}, []);
 
-	return { query, setQuery, results, selectedFile, selectFile };
+	return { query, setQuery, results, selectedFile, selectFile, searchSettled };
 }

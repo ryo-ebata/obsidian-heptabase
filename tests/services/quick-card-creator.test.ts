@@ -18,7 +18,7 @@ describe("QuickCardCreator", () => {
 		app = new App();
 		fileCreator = new FileCreator(app, DEFAULT_SETTINGS);
 		canvasOperator = new CanvasOperator(app, DEFAULT_SETTINGS);
-		quickCardCreator = new QuickCardCreator(fileCreator, canvasOperator);
+		quickCardCreator = new QuickCardCreator(fileCreator, canvasOperator, DEFAULT_SETTINGS);
 
 		canvas = {
 			getData: vi.fn().mockReturnValue({ nodes: [], edges: [] }),
@@ -32,6 +32,7 @@ describe("QuickCardCreator", () => {
 				height: 300,
 				file: new TFile("Untitled.md"),
 			}),
+			selectOnly: vi.fn(),
 		};
 
 		canvasFile = new TFile("canvas.canvas");
@@ -59,10 +60,12 @@ describe("QuickCardCreator", () => {
 					pos: { x: 100, y: 200 },
 				}),
 			);
-			expect(result).toBe(createdFile);
+			expect(result.file).toBe(createdFile);
+			expect(result.node.id).toBe("node-1");
+			expect(canvas.selectOnly).toHaveBeenCalledWith(result.node);
 		});
 
-		it("uses the default title for file content", async () => {
+		it("creates an empty body so the filename remains the single card title", async () => {
 			const createdFile = new TFile("notes/My Card.md");
 			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(null);
 			(app.vault.adapter.exists as Mock).mockResolvedValue(true);
@@ -70,7 +73,7 @@ describe("QuickCardCreator", () => {
 
 			await quickCardCreator.createCardAtPosition(canvas, canvasFile, { x: 0, y: 0 }, "My Card");
 
-			expect(app.vault.create).toHaveBeenCalledWith(expect.any(String), "# My Card");
+			expect(app.vault.create).toHaveBeenCalledWith(expect.any(String), "");
 		});
 
 		it("handles file name collision via FileCreator", async () => {
@@ -88,8 +91,8 @@ describe("QuickCardCreator", () => {
 				"Untitled",
 			);
 
-			expect(app.vault.create).toHaveBeenCalledWith("notes/Untitled_1.md", "# Untitled");
-			expect(result).toBe(createdFile);
+			expect(app.vault.create).toHaveBeenCalledWith("notes/Untitled_1.md", "");
+			expect(result.file).toBe(createdFile);
 		});
 
 		it("passes the correct position to canvasOperator", async () => {
@@ -112,6 +115,47 @@ describe("QuickCardCreator", () => {
 			);
 		});
 
+		it("offsets a new card until it no longer overlaps an existing node", async () => {
+			const createdFile = new TFile("notes/Untitled.md");
+			(canvas.getData as Mock).mockReturnValue({
+				nodes: [{ id: "existing", type: "text", x: 0, y: 0, width: 400, height: 300 }],
+				edges: [],
+			});
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(null);
+			(app.vault.adapter.exists as Mock).mockResolvedValue(true);
+			(app.vault.create as Mock).mockResolvedValue(createdFile);
+
+			await quickCardCreator.createCardAtPosition(canvas, canvasFile, { x: 0, y: 0 }, "Untitled");
+
+			expect(canvas.createFileNode).toHaveBeenCalledWith(
+				expect.objectContaining({ pos: { x: 360, y: 360 } }),
+			);
+		});
+
+		it("does not create a file when Canvas data is unavailable", async () => {
+			(canvas.getData as Mock).mockReturnValue({ nodes: undefined, edges: [] });
+
+			await expect(
+				quickCardCreator.createCardAtPosition(canvas, canvasFile, { x: 0, y: 0 }, "Untitled"),
+			).rejects.toThrow("Canvas data is unavailable");
+			expect(app.vault.create).not.toHaveBeenCalled();
+		});
+
+		it("removes the created file when adding the Canvas node fails", async () => {
+			const createdFile = new TFile("notes/Untitled.md");
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(null);
+			(app.vault.adapter.exists as Mock).mockResolvedValue(true);
+			(app.vault.create as Mock).mockResolvedValue(createdFile);
+			(canvas.createFileNode as Mock).mockImplementation(() => {
+				throw new Error("node failure");
+			});
+
+			await expect(
+				quickCardCreator.createCardAtPosition(canvas, canvasFile, { x: 0, y: 0 }, "Untitled"),
+			).rejects.toThrow("node failure");
+			expect(app.vault.delete).toHaveBeenCalledWith(createdFile);
+		});
+
 		it("uses canvasFile as the source file for FileCreator", async () => {
 			const canvasInSubfolder = new TFile("projects/my-canvas.canvas");
 			canvasInSubfolder.parent = new TFolder("projects");
@@ -128,7 +172,7 @@ describe("QuickCardCreator", () => {
 				"Untitled",
 			);
 
-			expect(app.vault.create).toHaveBeenCalledWith("projects/Untitled.md", "# Untitled");
+			expect(app.vault.create).toHaveBeenCalledWith("projects/Untitled.md", "");
 		});
 	});
 });

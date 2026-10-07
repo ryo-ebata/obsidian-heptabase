@@ -1,5 +1,5 @@
 import type { TFile } from "obsidian";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "./use-app";
 
 interface UseFileContentReturn {
@@ -13,23 +13,39 @@ export function useFileContent(file: TFile | null): UseFileContentReturn {
 	const { app } = useApp();
 	const [content, setContent] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const mountedRef = useRef(true);
+	const readRequestRef = useRef(0);
+
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!file) {
+			readRequestRef.current += 1;
 			setContent("");
 			setIsLoading(false);
 			return;
 		}
 
 		let cancelled = false;
+		const requestId = ++readRequestRef.current;
+		setContent("");
 		setIsLoading(true);
 
-		app.vault.read(file).then((text) => {
-			if (!cancelled) {
-				setContent(text);
-				setIsLoading(false);
-			}
-		});
+		app.vault
+			.read(file)
+			.then((text) => {
+				if (!cancelled && requestId === readRequestRef.current) {
+					setContent(text);
+					setIsLoading(false);
+				}
+			})
+			.catch(() => {
+				if (!cancelled) setIsLoading(false);
+			});
 
 		return () => {
 			cancelled = true;
@@ -50,9 +66,13 @@ export function useFileContent(file: TFile | null): UseFileContentReturn {
 		if (!file) {
 			return;
 		}
-		app.vault.read(file).then((text) => {
-			setContent(text);
-		});
+		const requestId = ++readRequestRef.current;
+		app.vault
+			.read(file)
+			.then((text) => {
+				if (mountedRef.current && requestId === readRequestRef.current) setContent(text);
+			})
+			.catch(() => undefined);
 	}, [app.vault, file]);
 
 	return { content, isLoading, save, refresh };

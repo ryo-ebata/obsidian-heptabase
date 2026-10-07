@@ -9,3 +9,5 @@ data.json
 .hotreload
 .playwright-mcp/
 coverage/
+test-results/
+.dev/

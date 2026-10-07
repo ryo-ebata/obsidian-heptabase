@@ -4,10 +4,11 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 describe("SidebarTabs", () => {
-	it("renders Card Library and Article tabs", () => {
+	it("renders Card Library, Article, and Canvas tabs", () => {
 		render(<SidebarTabs activeTab="card-library" onTabChange={vi.fn()} />);
 		expect(screen.getByText("Card Library")).toBeDefined();
 		expect(screen.getByText("Article")).toBeDefined();
+		expect(screen.getByText("Canvas")).toBeDefined();
 	});
 
 	it("marks the active tab with accent border", () => {
@@ -38,6 +39,14 @@ describe("SidebarTabs", () => {
 
 		fireEvent.click(screen.getByText("Card Library"));
 		expect(onTabChange).toHaveBeenCalledWith("card-library");
+	});
+
+	it("calls onTabChange when Canvas tab is clicked", () => {
+		const onTabChange = vi.fn();
+		render(<SidebarTabs activeTab="card-library" onTabChange={onTabChange} />);
+
+		fireEvent.click(screen.getByText("Canvas"));
+		expect(onTabChange).toHaveBeenCalledWith("canvas-search");
 	});
 
 	it("applies flex layout to container", () => {

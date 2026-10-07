@@ -1,5 +1,6 @@
 import type { HeptabaseSettings } from "@/types/settings";
-import { SidebarContainer } from "@/ui/components/sidebar-container";
+import { CanvasOperator } from "@/services/canvas-operator";
+import { SidebarContainer, type SidebarContainerHandle } from "@/ui/components/sidebar-container";
 import type { PluginContextValue } from "@/ui/context";
 import { PluginContext } from "@/ui/context";
 import type { App } from "obsidian";
@@ -11,11 +12,13 @@ export const VIEW_TYPE_HEADING_EXPLORER = "heading-explorer-view";
 
 export class HeadingExplorerView extends ItemView {
 	private root: Root | null = null;
+	private sidebarHandle: SidebarContainerHandle | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
 		private readonly appInstance: App,
 		private readonly settings: HeptabaseSettings,
+		private readonly canvasOperator = new CanvasOperator(appInstance, settings),
 	) {
 		super(leaf);
 	}
@@ -40,6 +43,7 @@ export class HeadingExplorerView extends ItemView {
 		const contextValue: PluginContextValue = {
 			app: this.appInstance,
 			settings: this.settings,
+			canvasOperator: this.canvasOperator,
 		};
 
 		this.root = createRoot(container);
@@ -47,9 +51,17 @@ export class HeadingExplorerView extends ItemView {
 			React.createElement(
 				PluginContext.Provider,
 				{ value: contextValue },
-				React.createElement(SidebarContainer),
+				React.createElement(SidebarContainer, {
+					ref: (handle: SidebarContainerHandle | null) => {
+						this.sidebarHandle = handle;
+					},
+				}),
 			),
 		);
+	}
+
+	openFile(filePath: string, options?: { focusTitle?: boolean }): void {
+		this.sidebarHandle?.openFile(filePath, options);
 	}
 
 	async onClose(): Promise<void> {
@@ -57,5 +69,6 @@ export class HeadingExplorerView extends ItemView {
 			this.root.unmount();
 			this.root = null;
 		}
+		this.sidebarHandle = null;
 	}
 }

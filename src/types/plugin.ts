@@ -10,11 +10,12 @@ export interface TextSelectionDragData {
 	filePath: string;
 	selectedText: string;
 	title: string;
+	sourceHeading?: string;
 }
 
 export type DragData = NoteDragData | TextSelectionDragData;
 
-export type SidebarTab = "card-library" | "article-viewer";
+export type SidebarTab = "card-library" | "article-viewer" | "canvas-search";
 
 export interface EdgeOptions {
 	fromNode: string;
@@ -35,6 +36,10 @@ export interface ParsedHeading {
 export interface SearchResult {
 	file: TFile;
 	excerpt: string;
+	headings: ParsedHeading[];
+	tags?: string[];
+	folder?: string;
+	modifiedTime?: number;
 }
 
 export interface ExtractedSection {

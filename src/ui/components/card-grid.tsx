@@ -7,20 +7,50 @@ const PAGE_SIZE = 20;
 
 interface CardGridProps {
 	results: SearchResult[];
+	query?: string;
+	inCanvasPaths?: ReadonlySet<string>;
+	selectedPaths?: ReadonlySet<string>;
+	hasActiveFilters?: boolean;
+	onClearFilters?: () => void;
 }
 
-export function CardGrid({ results }: CardGridProps): React.ReactElement {
+export function CardGrid({
+	results,
+	query = "",
+	inCanvasPaths = new Set(),
+	selectedPaths = new Set(),
+	hasActiveFilters = false,
+	onClearFilters,
+}: CardGridProps): React.ReactElement {
 	const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(results, PAGE_SIZE);
 
 	if (results.length === 0) {
-		return <div className="text-ob-muted text-center p-5 text-ob-ui-small">No notes found.</div>;
+		return (
+			<div className="heptabase-empty-state text-ob-muted text-center p-5 text-ob-ui-small">
+				<p>{hasActiveFilters ? "No cards match these filters." : "No cards in this vault yet."}</p>
+				{hasActiveFilters && onClearFilters && (
+					<button type="button" className="heptabase-text-action" onClick={onClearFilters}>
+						Clear filters
+					</button>
+				)}
+			</div>
+		);
 	}
 
 	return (
 		<div className="@container">
-			<div className="grid grid-cols-1 @[320px]:grid-cols-2 gap-2">
+			<div className="grid grid-cols-1 @[440px]:grid-cols-2 gap-2">
 				{visibleItems.map((result) => (
-					<NoteCard key={result.file.path} file={result.file} excerpt={result.excerpt} />
+					<NoteCard
+						key={result.file.path}
+						file={result.file}
+						excerpt={result.excerpt}
+						headings={result.headings}
+						tags={result.tags}
+						query={query}
+						isInCanvas={inCanvasPaths.has(result.file.path)}
+						isCanvasSelected={selectedPaths.has(result.file.path)}
+					/>
 				))}
 				{hasMore && <div ref={sentinelRef} data-testid="sentinel" className="h-full" />}
 			</div>

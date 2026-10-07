@@ -3,6 +3,7 @@ import {
 	type EmbeddableEditorOptions,
 	createEmbeddableEditor,
 } from "@/services/embeddable-editor";
+import { notifyError } from "@/utils/notify-error";
 import type { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "./use-app";
@@ -50,12 +51,16 @@ export function useEmbeddableEditor({
 		const options: EmbeddableEditorOptions = {
 			value: contentRef.current,
 			onBlur: (editor: EmbeddableEditorHandle) => {
-				onSaveRef.current(editor.value);
+				void Promise.resolve(onSaveRef.current(editor.value)).catch((error) => {
+					notifyError("Save failed", error);
+				});
 			},
 			onChange: (editor: EmbeddableEditorHandle) => {
 				clearTimeout(debounceTimerRef.current);
 				debounceTimerRef.current = window.setTimeout(() => {
-					onSaveRef.current(editor.value);
+					void Promise.resolve(onSaveRef.current(editor.value)).catch((error) => {
+						notifyError("Save failed", error);
+					});
 				}, 300);
 			},
 		};

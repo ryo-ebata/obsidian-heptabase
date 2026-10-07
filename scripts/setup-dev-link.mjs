@@ -62,6 +62,7 @@ if (!existsSync(hotreloadPath)) {
 }
 
 console.log("\nSetup complete! Next steps:");
-console.log("1. Install & enable 'Hot Reload' plugin in Obsidian (by pjeby)");
-console.log("2. Run 'pnpm dev' to start watch build");
-console.log("3. Code changes will auto-reload in Obsidian");
+console.log("1. Enable 'Heptabase-like Heading Explorer' in Obsidian");
+console.log("2. Run 'pnpm dev' to start the watch build");
+console.log("3. Reload plugins from Settings > Community plugins after changes");
+console.log("   Optional: install 'Hot Reload' by pjeby to automate step 3");

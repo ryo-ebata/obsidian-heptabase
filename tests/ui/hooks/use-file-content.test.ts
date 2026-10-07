@@ -32,6 +32,21 @@ describe("useFileContent", () => {
 		expect(result.current.isLoading).toBe(false);
 	});
 
+	it("stops loading when reading a file fails", async () => {
+		const app = new App();
+		const file = new TFile("notes/missing.md");
+		(app.vault.read as Mock).mockRejectedValue(new Error("File not found"));
+
+		const { result } = renderHook(() => useFileContent(file), {
+			wrapper: createWrapper(app),
+		});
+
+		await waitFor(() => {
+			expect(result.current.isLoading).toBe(false);
+		});
+		expect(result.current.content).toBe("");
+	});
+
 	it("resets content when file changes", async () => {
 		const app = new App();
 		const file1 = new TFile("notes/first.md");
@@ -54,6 +69,7 @@ describe("useFileContent", () => {
 		rerender({ file: file2 });
 
 		expect(result.current.isLoading).toBe(true);
+		expect(result.current.content).toBe("");
 
 		await waitFor(() => {
 			expect(result.current.content).toBe("Second content");

@@ -45,14 +45,113 @@ describe("HeadingParser", () => {
 			expect(result[0].excerpt).toBe("First body line\nSecond line");
 		});
 
-		it("skips blank lines in excerpt", async () => {
+		it("includes headings from the metadata cache", async () => {
+			const file = new TFile("notes/with-headings.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue("# Note\n\n## Setup\n\nBody");
+			(app.metadataCache.getFileCache as Mock).mockReturnValue({
+				headings: [
+					{
+						heading: "Setup",
+						level: 2,
+						position: {
+							start: { line: 2, col: 0, offset: 8 },
+							end: { line: 2, col: 7, offset: 15 },
+						},
+					},
+				],
+			});
+
+			const result = await parser.search("");
+
+			expect(result[0]?.headings).toHaveLength(1);
+			expect(result[0]?.headings[0]?.heading).toBe("Setup");
+		});
+
+		it("includes normalized inline and frontmatter tags", async () => {
+			const file = new TFile("research/paper.md");
+			file.parent = { path: "research" } as never;
+			file.stat.mtime = 42;
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue("content");
+			(app.metadataCache.getFileCache as Mock).mockReturnValue({
+				tags: [{ tag: "#research" }],
+				frontmatter: { tags: ["source", "#research"] },
+			});
+
+			const result = await parser.search("");
+
+			expect(result[0]?.tags).toEqual(["research", "source"]);
+			expect(result[0]?.folder).toBe("research");
+			expect(result[0]?.modifiedTime).toBe(42);
+		});
+
+		it("preserves a single paragraph boundary in excerpt", async () => {
 			const file = new TFile("notes/blanks.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
 			(app.vault.cachedRead as Mock).mockResolvedValue("\n\nFirst\n\nSecond\n\nThird\n\nFourth");
 
 			const result = await parser.search("");
 
-			expect(result[0].excerpt).toBe("First\nSecond\nThird");
+			expect(result[0].excerpt).toBe("First\n\nSecond\n\nThird");
+		});
+
+		it("uses body copy instead of headings for the library excerpt", async () => {
+			const file = new TFile("notes/structured.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue(
+				"# Note title\n\n## Context\n\nFirst body line\n\n### Detail\n\nSecond body line",
+			);
+
+			const result = await parser.search("");
+
+			expect(result[0].excerpt).toBe("First body line\n\nSecond body line");
+		});
+
+		it("omits complete fenced code blocks from the library excerpt", async () => {
+			const file = new TFile("notes/code.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue(
+				"Intro copy\n\n```bash\npnpm install\npnpm build\n```\n\nNext step\nFinal note",
+			);
+
+			const result = await parser.search("");
+
+			expect(result[0].excerpt).toBe("Intro copy\n\nNext step\nFinal note");
+		});
+
+		it("does not leak an unterminated code fence into the excerpt", async () => {
+			const file = new TFile("notes/broken-code.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue(
+				"Visible introduction\n\n~~~ts\nconst unfinished = true;",
+			);
+
+			const result = await parser.search("");
+
+			expect(result[0].excerpt).toBe("Visible introduction");
+		});
+
+		it("does not match content that exists only inside a fenced code block", async () => {
+			const file = new TFile("notes/code-only.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.read as Mock).mockResolvedValue("Intro\n\n```ts\nsecretNeedle()\n```");
+
+			const result = await parser.search("secretNeedle");
+
+			expect(result).toEqual([]);
+		});
+
+		it("keeps nearby body copy when a search matches a heading", async () => {
+			const file = new TFile("notes/structured.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.read as Mock).mockResolvedValue(
+				"Intro copy\n## Spatial context\nExplanation below the heading",
+			);
+
+			const result = await parser.search("spatial");
+
+			expect(result[0].excerpt).toBe("Intro copy\n\nExplanation below the heading");
 		});
 
 		it("matches by file title (case insensitive)", async () => {
@@ -108,6 +207,17 @@ describe("HeadingParser", () => {
 			expect(result).toEqual([]);
 		});
 
+		it("ignores surrounding whitespace in the query", async () => {
+			const file = new TFile("notes/hello.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+			(app.vault.cachedRead as Mock).mockResolvedValue("content");
+
+			const result = await parser.search("  ");
+
+			expect(result).toHaveLength(1);
+			expect(result[0]?.file).toBe(file);
+		});
+
 		it("returns excerpt from content when matched by body", async () => {
 			const file = new TFile("notes/body-match.md");
 			(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
@@ -117,6 +227,34 @@ describe("HeadingParser", () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0].excerpt).toBe("Line one\nLine two\nLine three");
+		});
+
+		it("skips an unreadable file while returning other matches", async () => {
+			const readable = new TFile("notes/readable.md");
+			const unreadable = new TFile("notes/unreadable.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([readable, unreadable]);
+			(app.vault.read as Mock).mockImplementation((file: TFile) =>
+				file === unreadable ? Promise.reject(new Error("read failed")) : Promise.resolve("keyword"),
+			);
+
+			const result = await parser.search("keyword");
+
+			expect(result).toHaveLength(1);
+			expect(result[0]?.file).toBe(readable);
+		});
+
+		it("skips an unreadable file for an empty query", async () => {
+			const readable = new TFile("notes/readable.md");
+			const unreadable = new TFile("notes/unreadable.md");
+			(app.vault.getMarkdownFiles as Mock).mockReturnValue([readable, unreadable]);
+			(app.vault.cachedRead as Mock).mockImplementation((file: TFile) =>
+				file === unreadable ? Promise.reject(new Error("read failed")) : Promise.resolve("content"),
+			);
+
+			const result = await parser.search("");
+
+			expect(result).toHaveLength(1);
+			expect(result[0]?.file).toBe(readable);
 		});
 	});
 });

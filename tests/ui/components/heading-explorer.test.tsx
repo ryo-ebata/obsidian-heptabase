@@ -10,6 +10,7 @@ vi.mock("@/ui/hooks/use-note-search", () => ({
 	useNoteSearch: vi.fn().mockReturnValue({
 		query: "",
 		results: [],
+		isSearching: false,
 		setQuery: vi.fn(),
 	}),
 }));
@@ -41,12 +42,12 @@ function renderWithContext() {
 describe("HeadingExplorer", () => {
 	it("renders the search bar", () => {
 		renderWithContext();
-		expect(screen.getByPlaceholderText("Search notes...")).toBeDefined();
+		expect(screen.getByPlaceholderText("Search cards...")).toBeDefined();
 	});
 
 	it("renders a root container with panel layout classes", () => {
 		const { container } = renderWithContext();
-		expect(container.querySelector(".p-2.h-full.overflow-y-auto")).not.toBeNull();
+		expect(container.querySelector(".heptabase-library.p-2.h-full")).not.toBeNull();
 	});
 
 	it("does not render selection mode UI", () => {

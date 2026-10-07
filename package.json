@@ -4,18 +4,26 @@
   "description": "Heptabase-like heading explorer for Obsidian Canvas",
   "main": "main.js",
   "scripts": {
-    "dev": "rolldown -c --watch & tailwindcss -i src/styles.css -o styles.css --watch",
+    "dev": "node scripts/dev-watch.mjs",
     "build": "BUILD=production rolldown -c && tailwindcss -i src/styles.css -o styles.css --minify",
     "css": "tailwindcss -i src/styles.css -o styles.css --watch",
     "test": "vitest run",
+    "test:visual": "playwright test --config playwright.config.ts",
+    "test:visual:update": "playwright test --config playwright.config.ts --update-snapshots",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "lint": "oxlint src/ tests/",
     "format": "oxfmt --write src/ tests/",
     "format:check": "oxfmt --check src/ tests/",
     "setup:link": "node scripts/setup-dev-link.mjs",
-    "dev:ui": "vite --config dev/vite.config.ts"
+    "setup:device": "node scripts/setup-device-test.mjs",
+    "open:device": "node scripts/open-device-test.mjs",
+    "dev:ui": "node scripts/dev-ui.mjs"
   },
   "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/cli": "^4.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

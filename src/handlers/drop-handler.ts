@@ -82,7 +82,15 @@ export class DropHandler {
 			const title = this.deriveTitle(dragData);
 
 			const createNode = async () => {
-				const newFile = await this.fileCreator.createFile(title, dragData.selectedText, sourceFile);
+				const newFile = await this.fileCreator.createFile(
+					title,
+					dragData.selectedText,
+					sourceFile,
+					{
+						sourceHeading: dragData.sourceHeading,
+						canvasPath: canvasView.file.path,
+					},
+				);
 				this.canvasOperator.addNodeToCanvas(canvasView.canvas, newFile, position);
 				new Notice(`Created "${newFile.basename}" on Canvas`);
 			};

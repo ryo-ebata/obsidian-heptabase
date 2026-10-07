@@ -2,13 +2,14 @@ import type { CanvasObserver } from "@/services/canvas-observer";
 import type { QuickCardCreator } from "@/services/quick-card-creator";
 import type { HeptabaseSettings } from "@/types/settings";
 import { notifyError } from "@/utils/notify-error";
-import { Notice } from "obsidian";
+import { Notice, type TFile } from "obsidian";
 
 export class CanvasEventHandler {
 	constructor(
 		private settings: HeptabaseSettings,
 		private canvasObserver: CanvasObserver,
 		private quickCardCreator: QuickCardCreator,
+		private onCardCreated?: (file: TFile) => void | Promise<void>,
 	) {}
 
 	async handleCanvasDblClick(evt: MouseEvent): Promise<void> {
@@ -29,37 +30,71 @@ export class CanvasEventHandler {
 			return;
 		}
 
-		const position = canvasView.canvas.posFromEvt(evt);
+		const pointerPosition = canvasView.canvas.posFromEvt(evt);
+		const position = this.centerCardAt(pointerPosition);
 
 		try {
-			const file = await this.quickCardCreator.createCardAtPosition(
+			const { file } = await this.quickCardCreator.createCardAtPosition(
 				canvasView.canvas,
 				canvasView.file,
 				position,
 				this.settings.quickCardDefaultTitle,
 			);
-			new Notice(`Created "${file.basename}" on Canvas`);
+			await this.finishCardCreation(file);
 		} catch (error) {
 			notifyError("Failed to create card", error);
 		}
 	}
 
-	async createNewCardAtOrigin(): Promise<void> {
+	async createNewCardInViewport(): Promise<void> {
 		const canvasView = this.canvasObserver.getActiveCanvasView();
 		if (!canvasView) {
 			return;
 		}
 
 		try {
-			const file = await this.quickCardCreator.createCardAtPosition(
+			const { file } = await this.quickCardCreator.createCardAtPosition(
 				canvasView.canvas,
 				canvasView.file,
-				{ x: 0, y: 0 },
+				this.getViewportCenter(canvasView.canvas),
 				this.settings.quickCardDefaultTitle,
 			);
-			new Notice(`Created "${file.basename}" on Canvas`);
+			await this.finishCardCreation(file);
 		} catch (error) {
 			notifyError("Failed to create card", error);
 		}
+	}
+
+	private centerCardAt(position: { x: number; y: number }): { x: number; y: number } {
+		return {
+			x: position.x - this.settings.defaultNodeWidth / 2,
+			y: position.y - this.settings.defaultNodeHeight / 2,
+		};
+	}
+
+	private async finishCardCreation(file: TFile): Promise<void> {
+		new Notice(`Created "${file.basename}" on Canvas`);
+		if (!this.onCardCreated) return;
+		try {
+			await this.onCardCreated(file);
+		} catch (error) {
+			notifyError("Card created, but the editor could not be opened", error);
+		}
+	}
+
+	private getViewportCenter(canvas: {
+		posFromEvt: (event: MouseEvent) => { x: number; y: number };
+	}): { x: number; y: number } {
+		const wrapper =
+			document.querySelector<HTMLElement>(".workspace-leaf.mod-active .canvas-wrapper") ??
+			document.querySelector<HTMLElement>(".canvas-wrapper");
+		if (!wrapper) return { x: 0, y: 0 };
+
+		const rect = wrapper.getBoundingClientRect();
+		const event = new MouseEvent("mousemove", {
+			clientX: rect.left + rect.width / 2,
+			clientY: rect.top + rect.height / 2,
+		});
+		return this.centerCardAt(canvas.posFromEvt(event));
 	}
 }

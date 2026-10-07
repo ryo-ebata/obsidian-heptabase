@@ -6,13 +6,16 @@ export class TFile {
 	basename: string;
 	extension: string;
 	parent: TFolder | null;
+	stat: { ctime: number; mtime: number; size: number };
 
 	constructor(path: string) {
 		this.path = path;
 		this.name = path.split("/").pop() ?? path;
 		this.basename = this.name.replace(/\.[^.]+$/, "");
 		this.extension = "md";
-		this.parent = null;
+		const parentPath = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+		this.parent = parentPath ? new TFolder(parentPath) : null;
+		this.stat = { ctime: Date.now(), mtime: Date.now(), size: 0 };
 	}
 }
 
@@ -28,13 +31,19 @@ export class TFolder {
 	}
 }
 
+const SAMPLE_TIMESTAMP = Date.UTC(2025, 0, 15, 12);
+
 const sampleFiles = [
 	new TFile("Projects/Getting Started.md"),
 	new TFile("Projects/Architecture Overview.md"),
 	new TFile("Notes/Daily Note 2025-01-15.md"),
 	new TFile("Notes/Meeting Notes.md"),
 	new TFile("Ideas/Feature Roadmap.md"),
-];
+].map((file, index, files) => {
+	const timestamp = SAMPLE_TIMESTAMP + (files.length - index) * 60_000;
+	file.stat = { ...file.stat, ctime: timestamp, mtime: timestamp };
+	return file;
+});
 
 const sampleHeadings: Record<string, HeadingCache[]> = {
 	"Projects/Getting Started.md": [
@@ -146,6 +155,14 @@ const sampleHeadings: Record<string, HeadingCache[]> = {
 	],
 };
 
+const sampleTags: Record<string, string[]> = {
+	"Projects/Getting Started.md": ["project", "guide"],
+	"Projects/Architecture Overview.md": ["project", "architecture"],
+	"Notes/Daily Note 2025-01-15.md": ["journal"],
+	"Notes/Meeting Notes.md": ["meeting", "project"],
+	"Ideas/Feature Roadmap.md": ["idea", "roadmap"],
+};
+
 const sampleContent: Record<string, string> = {
 	"Projects/Getting Started.md":
 		"# Getting Started\n\n## Installation\n\nInstall via community plugins.\n\n```bash\npnpm install\n```\n\n## Quick Start\n\nOpen a canvas and start dragging headings.\n\n### Configuration\n\nAdjust settings in the plugin settings tab.",
@@ -172,8 +189,16 @@ class MockVault {
 		return [...sampleFiles];
 	}
 
+	getFiles(): TFile[] {
+		return [...sampleFiles];
+	}
+
 	async read(file: TFile): Promise<string> {
 		return sampleContent[file.path] ?? "";
+	}
+
+	async cachedRead(file: TFile): Promise<string> {
+		return this.read(file);
 	}
 
 	async create(path: string, _content: string): Promise<TFile> {
@@ -181,6 +206,8 @@ class MockVault {
 	}
 
 	async modify(_file: TFile, _content: string): Promise<void> {}
+
+	async delete(_file: TFile): Promise<void> {}
 
 	async createFolder(_path: string): Promise<void> {}
 
@@ -194,6 +221,8 @@ class MockVault {
 		this.eventListeners.set(event, listeners);
 		return { id: `vault-${event}-${listeners.length}` };
 	}
+
+	offref(_ref: EventRef): void {}
 
 	adapter = {
 		exists: async (_path: string): Promise<boolean> => false,
@@ -228,6 +257,10 @@ class MockWorkspace {
 
 	revealLeaf(_leaf: unknown): void {}
 
+	getLeaf(_createNew: boolean): { openFile: () => Promise<void> } {
+		return { openFile: async () => {} };
+	}
+
 	trigger(event: string, ...args: unknown[]): void {
 		const listeners = this.eventListeners.get(event) ?? [];
 		for (const listener of listeners) {
@@ -237,16 +270,32 @@ class MockWorkspace {
 }
 
 class MockMetadataCache {
+	resolvedLinks: Record<string, Record<string, number>> = {};
+
 	getFileCache(file: TFile): CachedMetadata | null {
 		const headings = sampleHeadings[file.path];
-		if (!headings) {
+		const tags = sampleTags[file.path]?.map((tag) => ({ tag: `#${tag}` }));
+		if (!headings && !tags) {
 			return null;
 		}
-		return { headings };
+		return { headings, tags };
 	}
 
 	on(event: string, _callback: EventCallback): EventRef {
 		return { id: `metadata-${event}` };
+	}
+
+	offref(_ref: EventRef): void {}
+}
+
+class MockFileManager {
+	async renameFile(_file: TFile, _path: string): Promise<void> {}
+
+	async processFrontMatter(
+		_file: TFile,
+		callback: (frontmatter: Record<string, unknown>) => void,
+	): Promise<void> {
+		callback({});
 	}
 }
 
@@ -254,11 +303,13 @@ export function createMockApp(): {
 	vault: MockVault;
 	workspace: MockWorkspace;
 	metadataCache: MockMetadataCache;
+	fileManager: MockFileManager;
 } {
 	return {
 		vault: new MockVault(),
 		workspace: new MockWorkspace(),
 		metadataCache: new MockMetadataCache(),
+		fileManager: new MockFileManager(),
 	};
 }
 
@@ -275,4 +326,79 @@ export class Notice {
 		this.message = message;
 		console.log(`[Notice] ${message}`);
 	}
+}
+
+export class Component {
+	load(): void {}
+	unload(): void {}
+}
+
+export const MarkdownRenderer = {
+	async render(
+		_app: unknown,
+		markdown: string,
+		container: HTMLElement,
+		_sourcePath: string,
+		_component: Component,
+	): Promise<void> {
+		container.replaceChildren();
+		for (const block of markdown.split(/\n{2,}/).filter(Boolean)) {
+			const lines = block.split("\n");
+			if (lines.every((line) => /^\s*[-*+]\s+/.test(line))) {
+				container.appendChild(renderMockList(lines, false));
+			} else if (lines.every((line) => /^\s*\d+[.)]\s+/.test(line))) {
+				container.appendChild(renderMockList(lines, true));
+			} else {
+				const paragraph = document.createElement("p");
+				paragraph.textContent = lines.join(" ");
+				container.appendChild(paragraph);
+			}
+		}
+	},
+};
+
+function renderMockList(lines: string[], ordered: boolean): HTMLOListElement | HTMLUListElement {
+	const list = document.createElement(ordered ? "ol" : "ul");
+	for (const line of lines) {
+		const item = document.createElement("li");
+		const content = line.replace(ordered ? /^\s*\d+[.)]\s+/ : /^\s*[-*+]\s+/, "");
+		const task = content.match(/^\[([ xX])\]\s+(.*)$/);
+		if (task) {
+			list.classList.add("contains-task-list");
+			item.classList.add("task-list-item");
+			const checkbox = document.createElement("input");
+			checkbox.className = "task-list-item-checkbox";
+			checkbox.type = "checkbox";
+			checkbox.checked = task[1]?.toLowerCase() === "x";
+			checkbox.disabled = true;
+			item.append(checkbox, document.createTextNode(task[2] ?? ""));
+		} else {
+			item.textContent = content;
+		}
+		list.appendChild(item);
+	}
+	return list;
+}
+
+class MockMenuItem {
+	setTitle(_title: string): this {
+		return this;
+	}
+
+	setIcon(_icon: string): this {
+		return this;
+	}
+
+	onClick(_callback: () => void): this {
+		return this;
+	}
+}
+
+export class Menu {
+	addItem(callback: (item: MockMenuItem) => void): this {
+		callback(new MockMenuItem());
+		return this;
+	}
+
+	showAtMouseEvent(_event: MouseEvent): void {}
 }

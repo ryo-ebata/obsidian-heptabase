@@ -1,6 +1,6 @@
 import type { SearchResult } from "@/types/plugin";
 import { CardGrid } from "@/ui/components/card-grid";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TFile } from "obsidian";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,7 +14,6 @@ beforeEach(() => {
 	mockDisconnect = vi.fn();
 
 	class MockIntersectionObserver {
-		constructor(_cb: IntersectionObserverCallback) {}
 		observe = mockObserve;
 		disconnect = mockDisconnect;
 		unobserve = vi.fn();
@@ -50,7 +49,7 @@ describe("CardGrid", () => {
 
 	it("shows a message when results are empty", () => {
 		render(<CardGrid results={[]} />, { wrapper });
-		expect(screen.getByText("No notes found.")).toBeDefined();
+		expect(screen.getByText("No cards in this vault yet.")).toBeDefined();
 	});
 
 	it("applies muted text styling when empty", () => {
@@ -58,6 +57,17 @@ describe("CardGrid", () => {
 		const empty = container.querySelector(".text-ob-muted");
 		expect(empty).not.toBeNull();
 		expect(empty?.classList.contains("text-center")).toBe(true);
+	});
+
+	it("offers to clear filters when an empty result is filtered", () => {
+		const onClearFilters = vi.fn();
+		render(<CardGrid results={[]} hasActiveFilters onClearFilters={onClearFilters} />, {
+			wrapper,
+		});
+
+		expect(screen.getByText("No cards match these filters.")).toBeDefined();
+		fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+		expect(onClearFilters).toHaveBeenCalledOnce();
 	});
 
 	it("wraps grid in a container query parent", () => {
@@ -73,7 +83,7 @@ describe("CardGrid", () => {
 		expect(cqParent).not.toBeNull();
 		const grid = cqParent!.querySelector(".grid.grid-cols-1.gap-2");
 		expect(grid).not.toBeNull();
-		expect(grid!.classList.toString()).toContain("@[320px]:grid-cols-2");
+		expect(grid!.classList.toString()).toContain("@[440px]:grid-cols-2");
 	});
 
 	it("renders only first page of items for large result sets", () => {

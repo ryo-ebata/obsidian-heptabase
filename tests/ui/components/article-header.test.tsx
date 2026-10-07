@@ -23,8 +23,20 @@ describe("ArticleHeader", () => {
 		const input = screen.getByDisplayValue("Test Title");
 		expect(input).toBeDefined();
 		expect(input.tagName).toBe("INPUT");
+		expect(input.getAttribute("aria-label")).toBe("Article title");
 		expect(input.classList.contains("article-header-title")).toBe(true);
 		expect(container.querySelector(".article-header")).not.toBeNull();
+	});
+
+	it("focuses and selects the title when requested", () => {
+		const onTitleFocused = vi.fn();
+		renderHeader({ title: "Untitled", autoFocusTitle: true, onTitleFocused });
+
+		const input = screen.getByDisplayValue("Untitled") as HTMLInputElement;
+		expect(document.activeElement).toBe(input);
+		expect(input.selectionStart).toBe(0);
+		expect(input.selectionEnd).toBe("Untitled".length);
+		expect(onTitleFocused).toHaveBeenCalledOnce();
 	});
 
 	it("displays path", () => {
@@ -98,6 +110,42 @@ describe("ArticleHeader", () => {
 		fireEvent.keyDown(input, { key: "Enter" });
 
 		expect(onRename).toHaveBeenCalledWith("New Title");
+	});
+
+	it("does not rename twice when Enter is followed by blur", () => {
+		const onRename = vi.fn();
+		renderHeader({ title: "Original", onRename });
+
+		const input = screen.getByDisplayValue("Original");
+		fireEvent.change(input, { target: { value: "New Title" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		fireEvent.blur(input);
+
+		expect(onRename).toHaveBeenCalledTimes(1);
+	});
+
+	it("cancels an in-progress rename with Escape", () => {
+		const onRename = vi.fn();
+		renderHeader({ title: "Original", onRename });
+
+		const input = screen.getByDisplayValue("Original");
+		fireEvent.change(input, { target: { value: "Temporary" } });
+		fireEvent.keyDown(input, { key: "Escape" });
+
+		expect(onRename).not.toHaveBeenCalled();
+		expect(input).toHaveProperty("value", "Original");
+	});
+
+	it("sanitizes invalid filename characters before renaming", () => {
+		const onRename = vi.fn();
+		renderHeader({ title: "Original", onRename });
+
+		const input = screen.getByDisplayValue("Original");
+		fireEvent.change(input, { target: { value: "  New: Article?  " } });
+		fireEvent.keyDown(input, { key: "Enter" });
+
+		expect(onRename).toHaveBeenCalledWith("New Article");
+		expect(input).toHaveProperty("value", "New Article");
 	});
 
 	it("calls onPropertyChange on property value blur", () => {

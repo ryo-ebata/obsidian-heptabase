@@ -341,10 +341,9 @@ describe("EdgeSync", () => {
 		it("processes removed edges from .canvas file", async () => {
 			const nodes = [makeNode("n1", "notes/a.md"), makeNode("n2", "notes/b.md")];
 			const initialEdge = makeEdge("e1", "n1", "n2");
-			edgeSync.setSnapshot([initialEdge], makeNodeMap(nodes));
 
 			const canvasFile = new TFile("test.canvas");
-			const canvasData: CanvasData = { nodes, edges: [] };
+			const canvasData: CanvasData = { nodes, edges: [initialEdge] };
 
 			const sourceFile = new TFile("notes/a.md");
 			const targetFile = new TFile("notes/b.md");
@@ -354,10 +353,38 @@ describe("EdgeSync", () => {
 				return null;
 			});
 			vault.read = vi.fn().mockResolvedValue(JSON.stringify(canvasData));
-
+			await edgeSync.initializeFromCanvas(canvasFile);
+			vault.read = vi.fn().mockResolvedValue(JSON.stringify({ nodes, edges: [] }));
 			await edgeSync.onCanvasModified(canvasFile);
 
 			expect(fileManager.processFrontMatter).toHaveBeenCalled();
+		});
+
+		it("keeps snapshots isolated between canvas files", async () => {
+			const nodes = [makeNode("n1", "notes/a.md"), makeNode("n2", "notes/b.md")];
+			const edge = makeEdge("e1", "n1", "n2");
+			const firstCanvas = new TFile("first.canvas");
+			const secondCanvas = new TFile("second.canvas");
+			const sourceFile = new TFile("notes/a.md");
+			const targetFile = new TFile("notes/b.md");
+			vault.getAbstractFileByPath = vi.fn().mockImplementation((path: string) => {
+				if (path === sourceFile.path) return sourceFile;
+				if (path === targetFile.path) return targetFile;
+				return null;
+			});
+			vault.read = vi
+				.fn()
+				.mockResolvedValueOnce(JSON.stringify({ nodes, edges: [edge] }))
+				.mockResolvedValueOnce(JSON.stringify({ nodes, edges: [edge] }))
+				.mockResolvedValueOnce(JSON.stringify({ nodes, edges: [edge] }))
+				.mockResolvedValueOnce(JSON.stringify({ nodes, edges: [] }));
+
+			await edgeSync.initializeFromCanvas(firstCanvas);
+			await edgeSync.initializeFromCanvas(secondCanvas);
+			await edgeSync.onCanvasModified(firstCanvas);
+			await edgeSync.onCanvasModified(secondCanvas);
+
+			expect(fileManager.processFrontMatter).toHaveBeenCalledTimes(2);
 		});
 	});
 
@@ -366,6 +393,14 @@ describe("EdgeSync", () => {
 			const canvasFile = new TFile("test.canvas");
 			vault.read = vi.fn().mockResolvedValue("not valid json");
 			await edgeSync.onCanvasModified(canvasFile);
+			expect(fileManager.processFrontMatter).not.toHaveBeenCalled();
+		});
+
+		it("returns early when nodes or edges are missing", async () => {
+			const canvasFile = new TFile("test.canvas");
+			vault.read = vi.fn().mockResolvedValue(JSON.stringify({ nodes: [] }));
+
+			await expect(edgeSync.onCanvasModified(canvasFile)).resolves.toBeUndefined();
 			expect(fileManager.processFrontMatter).not.toHaveBeenCalled();
 		});
 	});

@@ -55,13 +55,17 @@ describe("CanvasEventHandler", () => {
 			getActiveCanvasView: vi.fn().mockReturnValue(null),
 		} as unknown as CanvasObserver;
 		quickCardCreator = {
-			createCardAtPosition: vi.fn().mockResolvedValue(new TFile("Untitled.md")),
+			createCardAtPosition: vi.fn().mockResolvedValue({
+				file: new TFile("Untitled.md"),
+				node: { id: "node-1", x: 0, y: 0, width: 400, height: 300 },
+			}),
 		} as unknown as QuickCardCreator;
 		handler = new CanvasEventHandler(settings, canvasObserver, quickCardCreator);
 	});
 
 	afterEach(() => {
 		noticeSpy.mockRestore();
+		document.body.innerHTML = "";
 	});
 
 	describe("handleCanvasDblClick", () => {
@@ -117,7 +121,7 @@ describe("CanvasEventHandler", () => {
 			expect(quickCardCreator.createCardAtPosition).toHaveBeenCalledWith(
 				canvasView.canvas,
 				canvasView.file,
-				expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }),
+				{ x: -100, y: 50 },
 				"Untitled",
 			);
 		});
@@ -132,6 +136,31 @@ describe("CanvasEventHandler", () => {
 			expect(quickCardCreator.createCardAtPosition).toHaveBeenCalled();
 		});
 
+		it("opens the created card for editing", async () => {
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+			const onCardCreated = vi.fn();
+			handler = new CanvasEventHandler(settings, canvasObserver, quickCardCreator, onCardCreated);
+
+			await handler.handleCanvasDblClick(createMockMouseEvent());
+
+			expect(onCardCreated).toHaveBeenCalledWith(expect.objectContaining({ path: "Untitled.md" }));
+		});
+
+		it("keeps the created card when opening its editor fails", async () => {
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+			handler = new CanvasEventHandler(settings, canvasObserver, quickCardCreator, () => {
+				throw new Error("view failure");
+			});
+
+			await handler.handleCanvasDblClick(createMockMouseEvent());
+
+			expect(noticeSpy).toHaveBeenCalledWith(
+				"Card created, but the editor could not be opened: view failure",
+			);
+		});
+
 		it("shows error notice when createCardAtPosition throws", async () => {
 			const canvasView = createMockCanvasView();
 			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
@@ -144,18 +173,18 @@ describe("CanvasEventHandler", () => {
 		});
 	});
 
-	describe("createNewCardAtOrigin", () => {
+	describe("createNewCardInViewport", () => {
 		it("does nothing when no active canvas", async () => {
 			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(null);
-			await handler.createNewCardAtOrigin();
+			await handler.createNewCardInViewport();
 			expect(quickCardCreator.createCardAtPosition).not.toHaveBeenCalled();
 		});
 
-		it("creates card at origin (0,0)", async () => {
+		it("falls back to the origin when the Canvas element is unavailable", async () => {
 			const canvasView = createMockCanvasView();
 			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
 
-			await handler.createNewCardAtOrigin();
+			await handler.createNewCardInViewport();
 
 			expect(quickCardCreator.createCardAtPosition).toHaveBeenCalledWith(
 				canvasView.canvas,
@@ -165,12 +194,38 @@ describe("CanvasEventHandler", () => {
 			);
 		});
 
+		it("creates a card centered in the visible Canvas", async () => {
+			const canvasView = createMockCanvasView();
+			canvasView.canvas.posFromEvt = vi.fn((event: MouseEvent | DragEvent) => ({
+				x: event.clientX,
+				y: event.clientY,
+			}));
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+			const activeLeaf = document.createElement("div");
+			activeLeaf.className = "workspace-leaf mod-active";
+			const wrapper = document.createElement("div");
+			wrapper.className = "canvas-wrapper";
+			wrapper.getBoundingClientRect = () =>
+				({ left: 10, top: 20, width: 800, height: 600 }) as DOMRect;
+			activeLeaf.appendChild(wrapper);
+			document.body.appendChild(activeLeaf);
+
+			await handler.createNewCardInViewport();
+
+			expect(quickCardCreator.createCardAtPosition).toHaveBeenCalledWith(
+				canvasView.canvas,
+				canvasView.file,
+				{ x: 210, y: 170 },
+				"Untitled",
+			);
+		});
+
 		it("shows error notice when createCardAtPosition throws", async () => {
 			const canvasView = createMockCanvasView();
 			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
 			(quickCardCreator.createCardAtPosition as Mock).mockRejectedValue(new Error("origin error"));
 
-			await handler.createNewCardAtOrigin();
+			await handler.createNewCardInViewport();
 
 			expect(noticeSpy).toHaveBeenCalledWith("Failed to create card: origin error");
 		});

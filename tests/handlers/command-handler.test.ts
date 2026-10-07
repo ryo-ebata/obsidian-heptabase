@@ -40,6 +40,7 @@ describe("CommandHandler", () => {
 		canvasOperator = {
 			addEdgeToCanvas: vi.fn(),
 			addGroupToCanvas: vi.fn(),
+			arrangeNodes: vi.fn().mockReturnValue(true),
 		} as unknown as CanvasOperator;
 		handler = new CommandHandler(settings, canvasObserver, canvasOperator);
 	});
@@ -60,6 +61,17 @@ describe("CommandHandler", () => {
 			(canvasObserver.getSelectedNodes as Mock).mockReturnValue([node]);
 			handler.connectSelectedNodes();
 			expect(noticeSpy).toHaveBeenCalledWith("Select exactly 2 nodes to connect");
+		});
+
+		it("rejects a duplicated node selection", () => {
+			const first: CanvasNode = { id: "n1", x: 0, y: 0, width: 400, height: 300 };
+			const second: CanvasNode = { id: "n1", x: 500, y: 0, width: 400, height: 300 };
+			(canvasObserver.getSelectedNodes as Mock).mockReturnValue([first, second]);
+
+			handler.connectSelectedNodes();
+
+			expect(noticeSpy).toHaveBeenCalledWith("Select two different nodes to connect");
+			expect(canvasOperator.addEdgeToCanvas).not.toHaveBeenCalled();
 		});
 
 		it("does nothing when no active canvas", () => {
@@ -134,6 +146,60 @@ describe("CommandHandler", () => {
 			handler.groupSelectedNodes();
 
 			expect(canvasOperator.addGroupToCanvas).toHaveBeenCalledWith(canvasView.canvas, [node]);
+		});
+	});
+
+	describe("layout commands", () => {
+		const nodes: CanvasNode[] = [
+			{ id: "n1", x: 0, y: 0, width: 100, height: 100 },
+			{ id: "n2", x: 200, y: 100, width: 100, height: 100 },
+			{ id: "n3", x: 500, y: 300, width: 100, height: 100 },
+		];
+
+		it("requires two nodes for alignment", () => {
+			(canvasObserver.getSelectedNodes as Mock).mockReturnValue(nodes.slice(0, 1));
+
+			handler.alignSelectedNodesLeft();
+
+			expect(noticeSpy).toHaveBeenCalledWith("Select at least 2 nodes to arrange");
+			expect(canvasOperator.arrangeNodes).not.toHaveBeenCalled();
+		});
+
+		it("aligns selected nodes to the left", () => {
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getSelectedNodes as Mock).mockReturnValue(nodes.slice(0, 2));
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			handler.alignSelectedNodesLeft();
+
+			expect(canvasOperator.arrangeNodes).toHaveBeenCalledWith(
+				canvasView.canvas,
+				["n1", "n2"],
+				"align-left",
+			);
+		});
+
+		it("requires three nodes for distribution", () => {
+			(canvasObserver.getSelectedNodes as Mock).mockReturnValue(nodes.slice(0, 2));
+
+			handler.distributeSelectedNodesHorizontally();
+
+			expect(noticeSpy).toHaveBeenCalledWith("Select at least 3 nodes to arrange");
+			expect(canvasOperator.arrangeNodes).not.toHaveBeenCalled();
+		});
+
+		it("distributes selected nodes vertically", () => {
+			const canvasView = createMockCanvasView();
+			(canvasObserver.getSelectedNodes as Mock).mockReturnValue(nodes);
+			(canvasObserver.getActiveCanvasView as Mock).mockReturnValue(canvasView);
+
+			handler.distributeSelectedNodesVertically();
+
+			expect(canvasOperator.arrangeNodes).toHaveBeenCalledWith(
+				canvasView.canvas,
+				["n1", "n2", "n3"],
+				"distribute-vertical",
+			);
 		});
 	});
 });

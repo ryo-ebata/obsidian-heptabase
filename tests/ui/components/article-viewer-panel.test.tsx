@@ -1,6 +1,7 @@
 import type { EmbeddableEditorHandle } from "@/services/embeddable-editor";
 import {
 	ArticleViewerPanel,
+	separateDuplicateTitleHeading,
 	type ArticleViewerPanelHandle,
 } from "@/ui/components/article-viewer-panel";
 import { act, fireEvent, render, screen } from "@testing-library/react";
@@ -54,6 +55,25 @@ async function selectFile(app: App, file: TFile) {
 }
 
 describe("ArticleViewerPanel", () => {
+	it("separates only a leading H1 that duplicates the file title", () => {
+		expect(
+			separateDuplicateTitleHeading("# Product Direction\n\nBody", "Product Direction"),
+		).toEqual({
+			body: "Body",
+			hiddenPrefix: "# Product Direction\n\n",
+		});
+		expect(
+			separateDuplicateTitleHeading("# Different heading\n\nBody", "Product Direction"),
+		).toEqual({
+			body: "# Different heading\n\nBody",
+			hiddenPrefix: "",
+		});
+	});
+
+	it("shows guidance before an article is selected", () => {
+		render(<ArticleViewerPanel />, { wrapper: createWrapper() });
+		expect(screen.getByRole("status").textContent).toContain("Select an article");
+	});
 	let app: App;
 
 	beforeEach(() => {
@@ -218,7 +238,7 @@ describe("ArticleViewerPanel", () => {
 		});
 
 		act(() => {
-			ref.current?.selectFile("notes/requested.md");
+			ref.current?.selectFile("notes/requested.md", { focusTitle: true });
 		});
 
 		await act(async () => {
@@ -227,6 +247,7 @@ describe("ArticleViewerPanel", () => {
 
 		expect(app.vault.getAbstractFileByPath).toHaveBeenCalledWith("notes/requested.md");
 		expect(container.querySelector(".article-header-title")).not.toBeNull();
+		expect(document.activeElement).toBe(screen.getByLabelText("Article title"));
 	});
 
 	it("strips frontmatter from content passed to editor", async () => {
@@ -265,5 +286,24 @@ describe("ArticleViewerPanel", () => {
 		});
 
 		expect(mockEditor.set).toHaveBeenCalledWith("# Hello World\n\nBody text.");
+	});
+
+	it("hides a duplicate leading H1 from the editor", async () => {
+		const file = new TFile("notes/hello.md");
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+		(app.vault.read as Mock).mockResolvedValue("# Hello\n\nBody text.");
+		(app.metadataCache.getFileCache as Mock).mockReturnValue({ frontmatter: {} });
+		const mockEditor = createMockEditor();
+		(createEmbeddableEditor as Mock).mockReturnValue(mockEditor);
+
+		render(<ArticleViewerPanel />, { wrapper: createWrapper(app) });
+		fireEvent.change(screen.getByPlaceholderText("Search articles..."), {
+			target: { value: "hello" },
+		});
+		await act(async () => vi.advanceTimersByTimeAsync(300));
+		fireEvent.click(screen.getByText("notes/hello.md"));
+		await act(async () => vi.advanceTimersByTimeAsync(0));
+
+		expect(mockEditor.set).toHaveBeenCalledWith("Body text.");
 	});
 });

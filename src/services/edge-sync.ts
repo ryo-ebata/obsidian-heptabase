@@ -5,6 +5,8 @@ import { TFile, type App } from "obsidian";
 export class EdgeSync {
 	private app: App;
 	private backlinkWriter: BacklinkWriter;
+	private canvasSnapshots = new WeakMap<TFile, CanvasSnapshot>();
+	private modificationQueues = new WeakMap<TFile, Promise<void>>();
 	private edgeSnapshot: Map<string, CanvasEdgeData> = new Map();
 	private nodeSnapshot: Map<string, CanvasNodeData> = new Map();
 
@@ -14,6 +16,19 @@ export class EdgeSync {
 	}
 
 	async onCanvasModified(file: TFile): Promise<void> {
+		const previous = this.modificationQueues.get(file) ?? Promise.resolve();
+		const current = previous.catch(() => undefined).then(() => this.processCanvasModified(file));
+		this.modificationQueues.set(file, current);
+		try {
+			await current;
+		} finally {
+			if (this.modificationQueues.get(file) === current) {
+				this.modificationQueues.delete(file);
+			}
+		}
+	}
+
+	private async processCanvasModified(file: TFile): Promise<void> {
 		if (!file.path.endsWith(".canvas")) {
 			return;
 		}
@@ -26,27 +41,39 @@ export class EdgeSync {
 			return;
 		}
 
-		const removedEdges = this.diffRemovedEdges(canvasData.edges);
-		for (const edge of removedEdges) {
-			await this.processRemovedEdge(edge, canvasData.edges);
+		// A partially written or manually edited Canvas file must not crash the
+		// metadata sync listener.
+		if (!Array.isArray(canvasData?.edges) || !Array.isArray(canvasData?.nodes)) {
+			return;
 		}
 
-		const newEdges = this.diffEdges(canvasData.edges);
+		const snapshot = this.canvasSnapshots.get(file) ?? EMPTY_SNAPSHOT;
+		const removedEdges = this.diffRemovedEdges(canvasData.edges, snapshot);
+		for (const edge of removedEdges) {
+			await this.processRemovedEdge(edge, canvasData.edges, snapshot);
+		}
+
+		const newEdges = this.diffEdges(canvasData.edges, snapshot);
 		for (const edge of newEdges) {
 			await this.processNewEdge(edge, canvasData);
 		}
 
-		this.setSnapshot(canvasData.edges, new Map(canvasData.nodes.map((n) => [n.id, n])));
+		this.canvasSnapshots.set(file, {
+			edges: new Map(canvasData.edges.map((edge) => [edge.id, edge])),
+			nodes: new Map(canvasData.nodes.map((node) => [node.id, node])),
+		});
 	}
 
-	diffEdges(currentEdges: CanvasEdgeData[]): CanvasEdgeData[] {
-		return currentEdges.filter((edge) => !this.edgeSnapshot.has(edge.id));
+	diffEdges(currentEdges: CanvasEdgeData[], snapshot?: CanvasSnapshot): CanvasEdgeData[] {
+		const edges = snapshot?.edges ?? this.edgeSnapshot;
+		return currentEdges.filter((edge) => !edges.has(edge.id));
 	}
 
-	diffRemovedEdges(currentEdges: CanvasEdgeData[]): CanvasEdgeData[] {
+	diffRemovedEdges(currentEdges: CanvasEdgeData[], snapshot?: CanvasSnapshot): CanvasEdgeData[] {
+		const edges = snapshot?.edges ?? this.edgeSnapshot;
 		const currentIds = new Set(currentEdges.map((e) => e.id));
 		const removed: CanvasEdgeData[] = [];
-		for (const [id, edge] of this.edgeSnapshot) {
+		for (const [id, edge] of edges) {
 			if (!currentIds.has(id)) {
 				removed.push(edge);
 			}
@@ -79,9 +106,14 @@ export class EdgeSync {
 		await this.backlinkWriter.addConnection(sourceFile, toBasename, "->");
 	}
 
-	async processRemovedEdge(edge: CanvasEdgeData, currentEdges: CanvasEdgeData[]): Promise<void> {
-		const fromNode = this.nodeSnapshot.get(edge.fromNode);
-		const toNode = this.nodeSnapshot.get(edge.toNode);
+	async processRemovedEdge(
+		edge: CanvasEdgeData,
+		currentEdges: CanvasEdgeData[],
+		snapshot?: CanvasSnapshot,
+	): Promise<void> {
+		const nodes = snapshot?.nodes ?? this.nodeSnapshot;
+		const fromNode = nodes.get(edge.fromNode);
+		const toNode = nodes.get(edge.toNode);
 
 		if (!fromNode?.file || !toNode?.file) {
 			return;
@@ -122,7 +154,15 @@ export class EdgeSync {
 			return;
 		}
 
+		if (!Array.isArray(canvasData?.edges) || !Array.isArray(canvasData?.nodes)) {
+			return;
+		}
+
 		this.setSnapshot(canvasData.edges, new Map(canvasData.nodes.map((n) => [n.id, n])));
+		this.canvasSnapshots.set(canvasFile, {
+			edges: new Map(canvasData.edges.map((edge) => [edge.id, edge])),
+			nodes: new Map(canvasData.nodes.map((node) => [node.id, node])),
+		});
 	}
 
 	setSnapshot(edges: CanvasEdgeData[], nodeMap: Map<string, CanvasNodeData>): void {
@@ -131,7 +171,16 @@ export class EdgeSync {
 	}
 
 	reset(): void {
+		this.canvasSnapshots = new WeakMap();
+		this.modificationQueues = new WeakMap();
 		this.edgeSnapshot = new Map();
 		this.nodeSnapshot = new Map();
 	}
 }
+
+interface CanvasSnapshot {
+	edges: Map<string, CanvasEdgeData>;
+	nodes: Map<string, CanvasNodeData>;
+}
+
+const EMPTY_SNAPSHOT: CanvasSnapshot = { edges: new Map(), nodes: new Map() };

@@ -19,7 +19,7 @@ export default class HeptabasePlugin extends Plugin {
 		this.initializeServices();
 
 		this.registerView(VIEW_TYPE_HEADING_EXPLORER, (leaf: WorkspaceLeaf) => {
-			return new HeadingExplorerView(leaf, this.app, this.settings);
+			return new HeadingExplorerView(leaf, this.app, this.settings, this.services.canvasOperator);
 		});
 
 		this.addRibbonIcon("list-tree", "Heading Explorer", () => {
@@ -55,15 +55,60 @@ export default class HeptabasePlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "align-selected-nodes-left",
+			name: "Align selected nodes to the left",
+			callback: () => this.commandHandler.alignSelectedNodesLeft(),
+		});
+
+		this.addCommand({
+			id: "align-selected-nodes-top",
+			name: "Align selected nodes to the top",
+			callback: () => this.commandHandler.alignSelectedNodesTop(),
+		});
+
+		this.addCommand({
+			id: "distribute-selected-nodes-horizontally",
+			name: "Distribute selected nodes horizontally",
+			callback: () => this.commandHandler.distributeSelectedNodesHorizontally(),
+		});
+
+		this.addCommand({
+			id: "distribute-selected-nodes-vertically",
+			name: "Distribute selected nodes vertically",
+			callback: () => this.commandHandler.distributeSelectedNodesVertically(),
+		});
+
+		this.addCommand({
+			id: "undo-last-canvas-change",
+			name: "Undo last Canvas change",
+			callback: () => {
+				this.commandHandler.undoLastCanvasChange();
+			},
+		});
+
+		this.addCommand({
+			id: "redo-last-canvas-change",
+			name: "Redo Canvas change",
+			callback: () => {
+				this.commandHandler.redoLastCanvasChange();
+			},
+		});
+
+		this.addCommand({
 			id: "create-new-card",
 			name: "Create new card",
 			callback: () => {
-				this.canvasEventHandler.createNewCardAtOrigin();
+				this.canvasEventHandler.createNewCardInViewport();
 			},
 		});
 
 		this.registerDomEvent(document, "dblclick", (evt: MouseEvent) => {
 			this.canvasEventHandler.handleCanvasDblClick(evt);
+		});
+
+		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
+			if (!(evt.target instanceof Element) || !evt.target.closest(".canvas-node")) return;
+			window.setTimeout(() => void this.openSelectedCanvasFile(), 0);
 		});
 
 		this.registerEvent(
@@ -107,6 +152,7 @@ export default class HeptabasePlugin extends Plugin {
 			this.settings,
 			this.services.canvasObserver,
 			this.services.quickCardCreator,
+			(file) => this.openFileInArticle(file.path, true),
 		);
 	}
 
@@ -135,6 +181,20 @@ export default class HeptabasePlugin extends Plugin {
 			});
 			this.app.workspace.revealLeaf(leaf);
 		}
+	}
+
+	private async openSelectedCanvasFile(): Promise<void> {
+		const selectedNodes = this.services.canvasObserver.getSelectedNodes();
+		if (selectedNodes.length !== 1 || !selectedNodes[0]?.file) return;
+
+		await this.openFileInArticle(selectedNodes[0].file.path, false);
+	}
+
+	private async openFileInArticle(filePath: string, focusTitle: boolean): Promise<void> {
+		await this.activateView();
+		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_HEADING_EXPLORER)[0];
+		const view = leaf?.view;
+		if (view instanceof HeadingExplorerView) view.openFile(filePath, { focusTitle });
 	}
 
 	private async loadSettings(): Promise<void> {

@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, type HeptabaseSettings } from "@/types/settings";
+import { CanvasOperator } from "@/services/canvas-operator";
 import {
 	PluginContext,
 	type PluginContextValue,
@@ -15,9 +16,12 @@ export function createWrapper(
 	settings?: HeptabaseSettings,
 	sidebarActions?: SidebarActionsValue,
 ) {
+	const resolvedApp = app ?? new App();
+	const resolvedSettings = settings ?? DEFAULT_SETTINGS;
 	const contextValue: PluginContextValue = {
-		app: app ?? new App(),
-		settings: settings ?? DEFAULT_SETTINGS,
+		app: resolvedApp,
+		settings: resolvedSettings,
+		canvasOperator: new CanvasOperator(resolvedApp, resolvedSettings),
 	};
 	const actionsValue: SidebarActionsValue = sidebarActions ?? {
 		openInArticle: vi.fn(),

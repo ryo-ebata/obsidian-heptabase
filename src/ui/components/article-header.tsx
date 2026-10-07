@@ -1,5 +1,6 @@
+import { sanitizeFilename } from "@/utils/sanitize-filename";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ArticleHeaderProps {
 	title: string;
@@ -9,6 +10,8 @@ interface ArticleHeaderProps {
 	onPropertyChange: (key: string, value: unknown) => void;
 	onPropertyDelete: (key: string) => void;
 	onPropertyAdd: (key: string, value: unknown) => void;
+	autoFocusTitle?: boolean;
+	onTitleFocused?: () => void;
 }
 
 function TagPills({
@@ -138,21 +141,40 @@ export function ArticleHeader({
 	onPropertyChange,
 	onPropertyDelete,
 	onPropertyAdd,
+	autoFocusTitle = false,
+	onTitleFocused,
 }: ArticleHeaderProps): React.ReactElement {
 	const [editTitle, setEditTitle] = useState(title);
 	const [showAddForm, setShowAddForm] = useState(false);
+	const committedTitleRef = useRef<string | null>(null);
+	const titleInputRef = useRef<HTMLInputElement>(null);
+
+	useEffect(() => {
+		if (!autoFocusTitle) return;
+		titleInputRef.current?.focus();
+		titleInputRef.current?.select();
+		onTitleFocused?.();
+	}, [autoFocusTitle, onTitleFocused]);
+
+	const commitTitle = () => {
+		const sanitizedTitle = sanitizeFilename(editTitle);
+		setEditTitle(sanitizedTitle);
+		if (sanitizedTitle !== title && sanitizedTitle !== committedTitleRef.current) {
+			committedTitleRef.current = sanitizedTitle;
+			onRename(sanitizedTitle);
+		}
+	};
 
 	const handleTitleBlur = () => {
-		if (editTitle !== title) {
-			onRename(editTitle);
-		}
+		commitTitle();
 	};
 
 	const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "Enter") {
-			if (editTitle !== title) {
-				onRename(editTitle);
-			}
+			commitTitle();
+			e.currentTarget.blur();
+		} else if (e.key === "Escape") {
+			setEditTitle(title);
 			e.currentTarget.blur();
 		}
 	};
@@ -163,9 +185,14 @@ export function ArticleHeader({
 	return (
 		<div className="article-header">
 			<input
+				ref={titleInputRef}
 				className="article-header-title"
+				aria-label="Article title"
 				value={editTitle}
-				onChange={(e) => setEditTitle(e.target.value)}
+				onChange={(e) => {
+					committedTitleRef.current = null;
+					setEditTitle(e.target.value);
+				}}
 				onBlur={handleTitleBlur}
 				onKeyDown={handleTitleKeyDown}
 			/>

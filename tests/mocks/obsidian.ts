@@ -11,6 +11,10 @@ export interface HeadingCache {
 	position: Pos;
 }
 
+export interface TagCache {
+	tag: string;
+}
+
 export interface FrontMatterCache {
 	position: Pos;
 	[key: string]: unknown;
@@ -18,6 +22,7 @@ export interface FrontMatterCache {
 
 export interface CachedMetadata {
 	headings?: HeadingCache[];
+	tags?: TagCache[];
 	frontmatter?: FrontMatterCache;
 }
 
@@ -29,6 +34,7 @@ export class TFile {
 	basename: string;
 	extension: string;
 	parent: TFolder | null;
+	stat: { ctime: number; mtime: number; size: number };
 
 	constructor(path = "test.md") {
 		this.path = path;
@@ -36,6 +42,7 @@ export class TFile {
 		this.basename = this.name.replace(/\.[^.]+$/, "");
 		this.extension = this.name.split(".").pop() ?? "";
 		this.parent = null;
+		this.stat = { ctime: 0, mtime: 0, size: 0 };
 	}
 }
 
@@ -54,12 +61,15 @@ export class TFolder {
 export class Vault {
 	getAbstractFileByPath = vi.fn();
 	getMarkdownFiles = vi.fn().mockReturnValue([]);
+	getFiles = vi.fn().mockReturnValue([]);
 	read = vi.fn().mockResolvedValue("");
 	cachedRead = vi.fn().mockResolvedValue("");
 	create = vi.fn().mockResolvedValue(new TFile());
 	modify = vi.fn().mockResolvedValue(undefined);
+	delete = vi.fn().mockResolvedValue(undefined);
 	createFolder = vi.fn().mockResolvedValue(undefined);
 	on = vi.fn().mockReturnValue({ id: "vault-event-ref" });
+	offref = vi.fn();
 	adapter = {
 		exists: vi.fn().mockResolvedValue(false),
 	};
@@ -87,6 +97,7 @@ export class Workspace {
 		setViewState: vi.fn().mockResolvedValue(undefined),
 	});
 	revealLeaf = vi.fn();
+	getLeaf = vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) });
 }
 
 export class MarkdownView {
@@ -94,6 +105,7 @@ export class MarkdownView {
 }
 
 export class MetadataCache {
+	resolvedLinks: Record<string, Record<string, number>> = {};
 	getFileCache = vi.fn().mockReturnValue(null);
 	on = vi.fn().mockReturnValue({ id: "metadata-event-ref" });
 	offref = vi.fn();
@@ -166,7 +178,13 @@ export const MarkdownRenderer = {
 };
 
 export class Component {
-	_stub = true;
+	static lastInstance: Component | null = null;
+	load = vi.fn();
+	unload = vi.fn();
+
+	constructor() {
+		Component.lastInstance = this;
+	}
 }
 
 export class Notice {

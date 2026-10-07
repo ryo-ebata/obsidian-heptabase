@@ -162,6 +162,7 @@ describe("DropHandler", () => {
 				"Selected Text",
 				"This is the selected paragraph text.",
 				sourceFile,
+				{ canvasPath: "test.canvas", sourceHeading: undefined },
 			);
 			expect(canvasOperator.addNodeToCanvas).toHaveBeenCalledWith(canvasView.canvas, newFile, {
 				x: 100,
@@ -285,6 +286,7 @@ describe("DropHandler", () => {
 				"Selected Text",
 				"This is the selected paragraph text.",
 				sourceFile,
+				{ canvasPath: "test.canvas", sourceHeading: undefined },
 			);
 		});
 
@@ -339,6 +341,7 @@ describe("DropHandler", () => {
 				"First line of text",
 				"First line of text\nSecond line",
 				sourceFile,
+				{ canvasPath: "test.canvas", sourceHeading: undefined },
 			);
 		});
 

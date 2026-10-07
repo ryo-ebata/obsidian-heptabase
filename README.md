@@ -17,12 +17,19 @@ Heptabase-like heading explorer for Obsidian Canvas — search, browse, and drag
 
 - **Sidebar heading explorer** — Browse all notes and their heading hierarchy in a right sidebar
 - **Debounced search** — Quickly filter notes by title with real-time search
+- **Library filters** — Filter by tag and folder, then sort by recency or title without rereading the Vault
 - **Drag & drop to Canvas** — Drag any heading onto an open Canvas to create a new note
 - **Smart content extraction** — Automatically extracts the full section content, including nested headings
 - **Auto file creation** — Creates new files with sanitized names and handles filename collisions
 - **Configurable node size** — Set default width and height for new Canvas nodes
 - **Configurable output** — Choose an output folder and file name prefix for extracted notes
 - **Backlink option** — Optionally leave a backlink in the original note after extraction
+- **Extraction provenance** — Records the source note, heading, Canvas, and extraction time on new concept cards
+- **Card context panel** — Shows source, backlinks, and every Canvas containing the current card
+- **Canvas-to-article navigation** — Select a file node on Canvas to open it in the sidebar editor
+- **Canvas search and focus** — Find cards, text, groups, and links on the current Canvas and zoom to them
+- **Canvas selection tools** — Align, distribute, connect, or group selected cards from one toolbar, with synchronized Undo/Redo
+- **Fast card capture** — Create a non-overlapping card, then name it immediately in a focused title editor
 - **Keyboard accessible** — Full keyboard navigation support
 
 ## Installation
@@ -49,6 +56,13 @@ Heptabase-like heading explorer for Obsidian Canvas — search, browse, and drag
 4. Expand a note to see its heading hierarchy
 5. Drag a heading onto the Canvas — a new note is created with the extracted section content
 
+Select multiple Canvas nodes and open Obsidian's command palette to align or distribute them. Alignment
+requires two nodes; equal distribution requires three or more.
+
+Run **Create new card** to place a selected card in the center of the visible Canvas. Cmd/Ctrl +
+double-click an empty Canvas area to create one at that point. The new card opens with its title
+selected, so typing replaces `Untitled` immediately.
+
 ## Settings
 
 | Setting                | Description                                                                          | Default   |
@@ -60,6 +74,9 @@ Heptabase-like heading explorer for Obsidian Canvas — search, browse, and drag
 | Leave backlink         | Leave a backlink in the original note after extracting                               | Off       |
 
 ## Development
+
+UI changes must follow the [UX principles](docs/UX_PRINCIPLES.md). Smoothness and visual quality are
+release criteria for this plugin.
 
 ### Prerequisites
 
@@ -81,6 +98,20 @@ pnpm test       # Run tests
 pnpm lint       # Lint with oxlint
 pnpm format     # Auto-format with oxfmt
 ```
+
+### Device testing in Obsidian
+
+Build the plugin, create a reproducible UX audit vault, and open it in Obsidian:
+
+```bash
+pnpm build
+pnpm setup:device
+pnpm open:device
+```
+
+The generated `.dev/ux-audit-vault` enables `obsidian-heptabase`, opens `UX監査Canvas.canvas`, and restores the Heading Explorer in a 380px right sidebar. Its notes cover folders, hierarchical tags, Japanese text, long titles, dense Canvas content, and empty/search/filter states. Use `UX監査チェックリスト.md` for the light/dark, narrow-width, keyboard, and continuous-operation audit. For iterative development, keep the vault open and run `pnpm dev`.
+
+Obsidian requires one manual registration on first use: choose **Open folder as vault**, select `.dev/ux-audit-vault`, trust the local vault, and enable **Heptabase-like Heading Explorer**. After that, `pnpm open:device` opens it directly.
 
 ## Contributing
 

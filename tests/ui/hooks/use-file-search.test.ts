@@ -26,6 +26,26 @@ describe("useFileSearch", () => {
 		expect(result.current.results).toEqual([]);
 	});
 
+	it("treats whitespace-only queries as empty", async () => {
+		const app = new App();
+		const file = new TFile("notes/hello.md");
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+
+		const { result } = renderHook(() => useFileSearch(), {
+			wrapper: createWrapper(app),
+		});
+
+		act(() => {
+			result.current.setQuery("   ");
+		});
+
+		await act(async () => {
+			vi.advanceTimersByTime(300);
+		});
+
+		expect(result.current.results).toEqual([]);
+	});
+
 	it("returns files matching the query (case insensitive)", async () => {
 		const app = new App();
 		const file1 = new TFile("notes/Hello.md");
@@ -74,7 +94,24 @@ describe("useFileSearch", () => {
 		expect(result.current.selectedFile).toBeNull();
 	});
 
-	it("debounces the search by 300ms", async () => {
+	it("clears the selected file when the search query changes", () => {
+		const app = new App();
+		const file = new TFile("notes/test.md");
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+
+		const { result } = renderHook(() => useFileSearch(), {
+			wrapper: createWrapper(app),
+		});
+
+		act(() => {
+			result.current.selectFile(file);
+			result.current.setQuery("different");
+		});
+
+		expect(result.current.selectedFile).toBeNull();
+	});
+
+	it("debounces the search by 160ms", async () => {
 		const app = new App();
 		const file = new TFile("notes/test.md");
 		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
@@ -91,7 +128,7 @@ describe("useFileSearch", () => {
 		expect(result.current.results).toEqual([]);
 
 		await act(async () => {
-			vi.advanceTimersByTime(299);
+			vi.advanceTimersByTime(159);
 		});
 
 		expect(result.current.results).toEqual([]);
@@ -119,23 +156,23 @@ describe("useFileSearch", () => {
 		});
 
 		await act(async () => {
-			vi.advanceTimersByTime(200);
+			vi.advanceTimersByTime(100);
 		});
 
 		act(() => {
 			result.current.setQuery("beta");
 		});
 
-		// After 300ms from first query (but only 100ms from second), should not have fired
+		// After 160ms from first query (but only 60ms from second), should not have fired
 		await act(async () => {
-			vi.advanceTimersByTime(100);
+			vi.advanceTimersByTime(60);
 		});
 
 		expect(result.current.results).toEqual([]);
 
-		// After 300ms from second query change
+		// After 160ms from second query change
 		await act(async () => {
-			vi.advanceTimersByTime(200);
+			vi.advanceTimersByTime(100);
 		});
 
 		expect(result.current.results).toHaveLength(1);

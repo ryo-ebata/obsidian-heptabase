@@ -39,10 +39,45 @@
 				border-radius: 8px;
 				overflow: hidden;
 			}
+
+			input,
+			select,
+			button {
+				font: inherit;
+				color: var(--text-normal);
+			}
+
+			input,
+			select {
+				min-height: 30px;
+				padding: 4px 8px;
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 5px;
+				background: var(--background-secondary);
+			}
+
+			input:focus,
+			select:focus,
+			button:focus-visible {
+				outline: 2px solid var(--interactive-accent);
+				outline-offset: 1px;
+			}
 		</style>
 	</head>
 	<body>
 		<div id="root"></div>
+		<script>
+			const showDevError = (value) => {
+				const root = document.getElementById("root");
+				if (!root || root.childElementCount > 0) return;
+				const message = value instanceof Error ? (value.stack ?? value.message) : String(value);
+				root.innerHTML = `<pre style="padding:12px;white-space:pre-wrap;font-size:12px">${message
+					.replaceAll("&", "&amp;")
+					.replaceAll("<", "&lt;")}</pre>`;
+			};
+			window.addEventListener("error", (event) => showDevError(event.error ?? event.message));
+			window.addEventListener("unhandledrejection", (event) => showDevError(event.reason));
+		</script>
 		<script type="module" src="./main.tsx"></script>
 	</body>
 </html>

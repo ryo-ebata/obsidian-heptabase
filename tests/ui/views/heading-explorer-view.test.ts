@@ -17,17 +17,18 @@ vi.mock("react", () => ({
 	createElement: vi.fn(),
 	createContext: vi.fn().mockReturnValue({}),
 	forwardRef: vi.fn((render: unknown) => render),
+	memo: vi.fn((component: unknown) => component),
 }));
 
+function createMockLeaf() {
+	return {} as never;
+}
+
+function createMockApp() {
+	return { vault: {}, workspace: {}, metadataCache: {} } as never;
+}
+
 describe("HeadingExplorerView", () => {
-	function createMockLeaf() {
-		return {} as never;
-	}
-
-	function createMockApp() {
-		return { vault: {}, workspace: {}, metadataCache: {} } as never;
-	}
-
 	function createView(): HeadingExplorerView {
 		const view = new HeadingExplorerView(createMockLeaf(), createMockApp(), DEFAULT_SETTINGS);
 		delete (view as Record<string, unknown>).onOpen;

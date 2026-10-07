@@ -65,6 +65,17 @@ describe("CanvasOperator", () => {
 	});
 
 	describe("addNodeToCanvas - when createFileNode is undefined (fallback)", () => {
+		it("skips malformed Canvas data without throwing or saving", () => {
+			const canvas = createMockCanvasNoApi();
+			vi.mocked(canvas.getData).mockReturnValue({ nodes: undefined as never, edges: [] });
+			const file = new TFile("notes/malformed.md");
+
+			expect(() => operator.addNodeToCanvas(canvas, file, { x: 0, y: 0 })).not.toThrow();
+			expect(operator.addNodeToCanvas(canvas, file, { x: 0, y: 0 })).toBeNull();
+			expect(canvas.setData).not.toHaveBeenCalled();
+			expect(canvas.requestSave).not.toHaveBeenCalled();
+		});
+
 		it("uses getData/setData/requestSave for JSON manipulation", () => {
 			const canvas = createMockCanvasNoApi();
 			const file = new TFile("notes/fallback.md");
@@ -184,7 +195,128 @@ describe("CanvasOperator", () => {
 		});
 	});
 
+	describe("arrangeNodes", () => {
+		function createLayoutCanvas(): Canvas {
+			return {
+				...createMockCanvas(),
+				getData: vi.fn().mockReturnValue({
+					nodes: [
+						{ id: "a", type: "text", x: 100, y: 50, width: 100, height: 80 },
+						{ id: "b", type: "text", x: 350, y: 200, width: 200, height: 100 },
+						{ id: "c", type: "text", x: 800, y: 500, width: 100, height: 120 },
+						{ id: "untouched", type: "text", x: 42, y: 43, width: 50, height: 50 },
+					],
+					edges: [],
+				}),
+			};
+		}
+
+		it("aligns selected nodes to the left edge", () => {
+			const canvas = createLayoutCanvas();
+
+			const changed = operator.arrangeNodes(canvas, ["a", "b", "c"], "align-left");
+
+			expect(changed).toBe(true);
+			const data = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(data.nodes.slice(0, 3).map((node) => node.x)).toEqual([100, 100, 100]);
+			expect(data.nodes[3]).toMatchObject({ x: 42, y: 43 });
+			expect(canvas.requestSave).toHaveBeenCalledOnce();
+		});
+
+		it("aligns selected nodes to the top edge", () => {
+			const canvas = createLayoutCanvas();
+
+			operator.arrangeNodes(canvas, ["a", "b"], "align-top");
+
+			const data = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(data.nodes.slice(0, 2).map((node) => node.y)).toEqual([50, 50]);
+		});
+
+		it("distributes nodes with equal horizontal gaps while preserving outer edges", () => {
+			const canvas = createLayoutCanvas();
+
+			operator.arrangeNodes(canvas, ["a", "b", "c"], "distribute-horizontal");
+
+			const data = vi.mocked(canvas.setData).mock.calls[0][0];
+			expect(data.nodes.slice(0, 3).map((node) => node.x)).toEqual([100, 400, 800]);
+			const firstGap = data.nodes[1]!.x - (data.nodes[0]!.x + data.nodes[0]!.width);
+			const secondGap = data.nodes[2]!.x - (data.nodes[1]!.x + data.nodes[1]!.width);
+			expect(firstGap).toBe(secondGap);
+		});
+
+		it("distributes nodes with equal vertical gaps while preserving outer edges", () => {
+			const canvas = createLayoutCanvas();
+
+			operator.arrangeNodes(canvas, ["a", "b", "c"], "distribute-vertical");
+
+			const data = vi.mocked(canvas.setData).mock.calls[0][0];
+			const firstGap = data.nodes[1]!.y - (data.nodes[0]!.y + data.nodes[0]!.height);
+			const secondGap = data.nodes[2]!.y - (data.nodes[1]!.y + data.nodes[1]!.height);
+			expect(firstGap).toBe(secondGap);
+			expect(data.nodes[0]!.y).toBe(50);
+			expect(data.nodes[2]!.y + data.nodes[2]!.height).toBe(620);
+		});
+
+		it("does not save when nodes are already arranged", () => {
+			const canvas = createLayoutCanvas();
+			canvas.getData().nodes[1]!.x = 400;
+
+			const changed = operator.arrangeNodes(canvas, ["a", "b", "c"], "distribute-horizontal");
+
+			expect(changed).toBe(false);
+			expect(canvas.setData).not.toHaveBeenCalled();
+			expect(canvas.requestSave).not.toHaveBeenCalled();
+		});
+
+		it("rejects an incomplete selection", () => {
+			const canvas = createLayoutCanvas();
+
+			const changed = operator.arrangeNodes(
+				canvas,
+				["a", "missing", "also-missing"],
+				"distribute-horizontal",
+			);
+
+			expect(changed).toBe(false);
+			expect(canvas.setData).not.toHaveBeenCalled();
+		});
+
+		it("records layout changes in Canvas history", () => {
+			const canvas = createLayoutCanvas();
+
+			operator.arrangeNodes(canvas, ["a", "b"], "align-left");
+			const undone = operator.undo(canvas);
+
+			expect(undone).toBe(true);
+			const restored = vi.mocked(canvas.setData).mock.calls[1][0];
+			expect(restored.nodes.slice(0, 2).map((node) => node.x)).toEqual([100, 350]);
+		});
+	});
+
 	describe("addNodeViaJson", () => {
+		it("skips invalid Canvas JSON without writing", async () => {
+			const canvasFile = new TFile("canvas/invalid.canvas");
+			const file = new TFile("notes/node.md");
+			app.vault.read = vi.fn().mockResolvedValue("not valid json");
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await expect(
+				operator.addNodeViaJson(canvasFile, file, { x: 0, y: 0 }),
+			).resolves.toBeUndefined();
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
+		it("skips malformed Canvas data without writing", async () => {
+			const canvasFile = new TFile("canvas/malformed.canvas");
+			const file = new TFile("notes/node.md");
+			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify({ nodes: [] }));
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addNodeViaJson(canvasFile, file, { x: 0, y: 0 });
+
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
 		it("reads JSON, parses, adds node, and writes back", async () => {
 			const canvasFile = new TFile("canvas/test.canvas");
 			const file = new TFile("notes/via-json.md");
@@ -297,9 +429,59 @@ describe("CanvasOperator", () => {
 	});
 
 	describe("addEdgeToCanvas", () => {
+		it("does not create a self-loop edge", () => {
+			const canvas = createMockCanvas();
+
+			expect(operator.addEdgeToCanvas(canvas, { fromNode: "node-a", toNode: "node-a" })).toBe(
+				false,
+			);
+			expect(canvas.getData).not.toHaveBeenCalled();
+		});
+		it("does not create an edge to a missing node", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [{ id: "node-a", type: "text", x: 0, y: 0, width: 10, height: 10 }],
+				edges: [],
+			});
+
+			expect(operator.addEdgeToCanvas(canvas, { fromNode: "node-a", toNode: "missing" })).toBe(
+				false,
+			);
+			expect(canvas.setData).not.toHaveBeenCalled();
+		});
+		it("does not create a duplicate directed edge", () => {
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [
+					{ id: "node-a", type: "text", x: 0, y: 0, width: 10, height: 10 },
+					{ id: "node-b", type: "text", x: 20, y: 0, width: 10, height: 10 },
+				],
+				edges: [
+					{
+						id: "existing",
+						fromNode: "node-a",
+						fromSide: "right",
+						toNode: "node-b",
+						toSide: "left",
+					},
+				],
+			});
+
+			expect(operator.addEdgeToCanvas(canvas, { fromNode: "node-a", toNode: "node-b" })).toBe(
+				false,
+			);
+			expect(canvas.setData).not.toHaveBeenCalled();
+		});
+
 		it("adds an edge via JSON manipulation", () => {
 			const canvas = createMockCanvas();
-			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [
+					{ id: "node-a", type: "text", x: 0, y: 0, width: 10, height: 10 },
+					{ id: "node-b", type: "text", x: 20, y: 0, width: 10, height: 10 },
+				],
+				edges: [],
+			});
 
 			operator.addEdgeToCanvas(canvas, {
 				fromNode: "node-a",
@@ -323,7 +505,13 @@ describe("CanvasOperator", () => {
 
 		it("applies custom color and label", () => {
 			const canvas = createMockCanvas();
-			vi.mocked(canvas.getData).mockReturnValue({ nodes: [], edges: [] });
+			vi.mocked(canvas.getData).mockReturnValue({
+				nodes: [
+					{ id: "node-a", type: "text", x: 0, y: 0, width: 10, height: 10 },
+					{ id: "node-b", type: "text", x: 20, y: 0, width: 10, height: 10 },
+				],
+				edges: [],
+			});
 
 			operator.addEdgeToCanvas(canvas, {
 				fromNode: "node-a",
@@ -341,7 +529,12 @@ describe("CanvasOperator", () => {
 		it("preserves existing edges", () => {
 			const canvas = createMockCanvas();
 			vi.mocked(canvas.getData).mockReturnValue({
-				nodes: [],
+				nodes: [
+					{ id: "a", type: "text", x: 0, y: 0, width: 10, height: 10 },
+					{ id: "b", type: "text", x: 20, y: 0, width: 10, height: 10 },
+					{ id: "c", type: "text", x: 40, y: 0, width: 10, height: 10 },
+					{ id: "d", type: "text", x: 60, y: 0, width: 10, height: 10 },
+				],
 				edges: [
 					{
 						id: "existing-edge",
@@ -365,9 +558,77 @@ describe("CanvasOperator", () => {
 	});
 
 	describe("addEdgeViaJson", () => {
+		it("does not write a self-loop edge", async () => {
+			const canvasFile = new TFile("canvas/self-loop.canvas");
+
+			await operator.addEdgeViaJson(canvasFile, { fromNode: "node-a", toNode: "node-a" });
+			expect(app.vault.read).not.toHaveBeenCalled();
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+		it("does not write an edge to a missing node", async () => {
+			const canvasFile = new TFile("canvas/missing-node.canvas");
+			app.vault.read = vi.fn().mockResolvedValue(
+				JSON.stringify({
+					nodes: [{ id: "node-1", type: "text", x: 0, y: 0, width: 10, height: 10 }],
+					edges: [],
+				}),
+			);
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addEdgeViaJson(canvasFile, { fromNode: "node-1", toNode: "missing" });
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+		it("does not write a duplicate directed edge", async () => {
+			const canvasFile = new TFile("canvas/existing.canvas");
+			app.vault.read = vi.fn().mockResolvedValue(
+				JSON.stringify({
+					nodes: [],
+					edges: [
+						{
+							id: "existing",
+							fromNode: "node-1",
+							fromSide: "right",
+							toNode: "node-2",
+							toSide: "left",
+						},
+					],
+				}),
+			);
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addEdgeViaJson(canvasFile, { fromNode: "node-1", toNode: "node-2" });
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
+		it("skips malformed Canvas JSON without writing", async () => {
+			const canvasFile = new TFile("canvas/invalid.canvas");
+			app.vault.read = vi.fn().mockResolvedValue("not valid json");
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await expect(
+				operator.addEdgeViaJson(canvasFile, { fromNode: "a", toNode: "b" }),
+			).resolves.toBeUndefined();
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
+		it("skips malformed Canvas shape without writing", async () => {
+			const canvasFile = new TFile("canvas/malformed.canvas");
+			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify({ nodes: [] }));
+			app.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+			await operator.addEdgeViaJson(canvasFile, { fromNode: "a", toNode: "b" });
+			expect(app.vault.modify).not.toHaveBeenCalled();
+		});
+
 		it("reads JSON, adds edge, and writes back", async () => {
 			const canvasFile = new TFile("canvas/test.canvas");
-			const emptyData = { nodes: [], edges: [] };
+			const emptyData = {
+				nodes: [
+					{ id: "node-1", type: "text", x: 0, y: 0, width: 10, height: 10 },
+					{ id: "node-2", type: "text", x: 20, y: 0, width: 10, height: 10 },
+				],
+				edges: [],
+			};
 			app.vault.read = vi.fn().mockResolvedValue(JSON.stringify(emptyData));
 			app.vault.modify = vi.fn().mockResolvedValue(undefined);
 

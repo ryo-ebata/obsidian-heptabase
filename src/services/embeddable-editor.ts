@@ -1,6 +1,6 @@
 import { EditorSelection, type Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, placeholder as cmPlaceholder } from "@codemirror/view";
-import type { App } from "obsidian";
+import type { App, MarkdownFileInfo, Scope } from "obsidian";
 
 // --- Internal Obsidian type declarations ---
 // These use non-public APIs; may break on Obsidian updates.
@@ -116,7 +116,6 @@ export function createEmbeddableEditor(
 		getMode: () => "source",
 	});
 
-	// @ts-expect-error — internal owner setup
 	instance.owner.editMode = instance;
 	instance.owner.editor = instance.editor;
 
@@ -187,14 +186,12 @@ export function createEmbeddableEditor(
 	}
 
 	// Focus management
-	// @ts-expect-error — accessing internal keymap/scope APIs
 	const appScope = app.keymap;
 	instance.editor.cm.contentDOM.addEventListener("focusin", () => {
 		if (appScope?.pushScope) {
-			appScope.pushScope(instance);
+			appScope.pushScope(instance as unknown as Scope);
 		}
-		// @ts-expect-error — internal workspace.activeEditor
-		app.workspace.activeEditor = instance.owner;
+		app.workspace.activeEditor = instance.owner as unknown as MarkdownFileInfo;
 	});
 
 	if (options.cls) {
@@ -222,9 +219,8 @@ export function createEmbeddableEditor(
 				instance.unload();
 			}
 			if (appScope?.popScope) {
-				appScope.popScope(instance);
+				appScope.popScope(instance as unknown as Scope);
 			}
-			// @ts-expect-error — internal workspace.activeEditor
 			app.workspace.activeEditor = null;
 			container.innerHTML = "";
 		},

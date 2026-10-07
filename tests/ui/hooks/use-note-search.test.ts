@@ -29,14 +29,38 @@ describe("useNoteSearch", () => {
 		expect(result.current.results[0].excerpt).toBe("Some content");
 	});
 
-	it("updates the search query with setQuery", () => {
+	it("updates the search query with setQuery", async () => {
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper() });
 
 		act(() => {
 			result.current.setQuery("test");
 		});
+		expect(result.current.isSearching).toBe(true);
+
+		await act(async () => {});
 
 		expect(result.current.query).toBe("test");
+	});
+
+	it("keeps results stable while restoring the full library", async () => {
+		const app = new App();
+		const file = new TFile("notes/hello.md");
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+		(app.vault.cachedRead as Mock).mockResolvedValue("content");
+		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
+
+		await act(async () => {});
+		expect(result.current.results).toHaveLength(1);
+
+		act(() => {
+			result.current.setQuery("   ");
+		});
+		expect(result.current.results).toHaveLength(1);
+		expect(result.current.isSearching).toBe(true);
+
+		await act(async () => {});
+		expect(result.current.results).toHaveLength(1);
+		expect(result.current.isSearching).toBe(false);
 	});
 
 	it("executes search after debounce", async () => {
@@ -55,13 +79,14 @@ describe("useNoteSearch", () => {
 		});
 
 		await act(async () => {
-			vi.advanceTimersByTime(300);
+			vi.advanceTimersByTime(160);
 		});
 
 		await act(async () => {});
 
 		expect(result.current.results).toHaveLength(1);
 		expect(result.current.results[0].file).toBe(file);
+		expect(result.current.isSearching).toBe(false);
 	});
 
 	it("resets the previous timer when a new query is entered during debounce", async () => {
@@ -80,7 +105,7 @@ describe("useNoteSearch", () => {
 		});
 
 		act(() => {
-			vi.advanceTimersByTime(200);
+			vi.advanceTimersByTime(100);
 		});
 
 		act(() => {
@@ -90,7 +115,7 @@ describe("useNoteSearch", () => {
 		expect(result.current.query).toBe("test");
 
 		await act(async () => {
-			vi.advanceTimersByTime(300);
+			vi.advanceTimersByTime(160);
 		});
 
 		await act(async () => {});

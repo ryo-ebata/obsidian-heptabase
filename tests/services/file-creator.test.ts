@@ -48,6 +48,23 @@ describe("FileCreator", () => {
 			expect(app.vault.create).toHaveBeenCalledWith("notes/My Heading.md", "Some content");
 			expect(result.basename).toBe("My Heading");
 		});
+
+		it("adds provenance to an extracted card", async () => {
+			(app.vault.getAbstractFileByPath as Mock).mockReturnValue(null);
+			(app.vault.adapter.exists as Mock).mockResolvedValue(true);
+
+			await creator.createFile("Concept", "# Concept\nBody", sourceFile, {
+				sourceHeading: "Source section",
+				canvasPath: "maps/research.canvas",
+			});
+
+			const content = (app.vault.create as Mock).mock.calls[0]?.[1] as string;
+			expect(content).toContain('heptabase-source: "notes/source.md"');
+			expect(content).toContain('heptabase-source-heading: "Source section"');
+			expect(content).toContain('heptabase-canvas: "maps/research.canvas"');
+			expect(content).toContain("heptabase-extracted-at:");
+			expect(content).toContain("---\n# Concept\nBody");
+		});
 	});
 
 	describe("sequential suffix on name collision", () => {

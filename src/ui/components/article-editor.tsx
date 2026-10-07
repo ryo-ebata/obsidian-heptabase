@@ -19,5 +19,5 @@ export function ArticleEditor({
 		onEditorViewChange: onEditorView,
 	});
 
-	return <div ref={containerRef} className="article-editor flex-1 overflow-y-auto p-2" />;
+	return <div ref={containerRef} className="article-editor flex-1 overflow-y-auto" />;
 }
