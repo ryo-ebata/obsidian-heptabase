@@ -147,6 +147,16 @@ describe("NoteCard", () => {
 		expect(container.querySelector(".card-fade")).toBeNull();
 	});
 
+	it("reserves excerpt space while initial content is hydrating", () => {
+		const { container } = render(<NoteCard file={file} excerpt="" isHydrating />, {
+			wrapper,
+		});
+
+		const loadingExcerpt = container.querySelector(".heptabase-note-card__excerpt.is-loading");
+		expect(loadingExcerpt).not.toBeNull();
+		expect(loadingExcerpt?.getAttribute("aria-hidden")).toBe("true");
+	});
+
 	it("has draggable attribute", () => {
 		const { container } = render(<NoteCard file={file} excerpt={excerpt} />, { wrapper });
 		const card = container.querySelector("[draggable]");
@@ -251,7 +261,7 @@ describe("NoteCard", () => {
 		});
 
 		expect(screen.queryByText("Section 4")).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "2 more" }));
+		fireEvent.click(screen.getByRole("button", { name: "3 more" }));
 		expect(screen.getByText("Section 4")).toBeDefined();
 		expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe(
 			"true",
@@ -336,11 +346,15 @@ describe("NoteCard", () => {
 
 	it("adds file to canvas via context menu", () => {
 		const app = new App();
+		const canvasData = { nodes: [], edges: [] };
 		const mockCanvas = {
 			tx: 0,
 			ty: 0,
 			tZoom: 1,
-			createFileNode: vi.fn(),
+			getData: vi.fn(() => canvasData),
+			setData: vi.fn(),
+			requestSave: vi.fn(),
+			createFileNode: vi.fn(() => ({ id: "new-node" })),
 		};
 		(app.workspace.getLeavesOfType as Mock).mockReturnValue([{ view: { canvas: mockCanvas } }]);
 

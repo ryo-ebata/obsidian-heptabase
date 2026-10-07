@@ -1,4 +1,5 @@
 import { CanvasOperator } from "@/services/canvas-operator";
+import { CanvasHistory } from "@/services/canvas-history";
 import type { Canvas, CanvasData, CanvasNode } from "@/types/obsidian-canvas";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import { App, TFile } from "obsidian";
@@ -61,6 +62,32 @@ describe("CanvasOperator", () => {
 			expect(result?.id).toBe("new-node");
 			expect(result?.x).toBe(100);
 			expect(result?.y).toBe(200);
+		});
+
+		it("snapshots mutable Canvas data before the native API changes it", () => {
+			const data: CanvasData = { nodes: [], edges: [] };
+			const canvas = createMockCanvas();
+			vi.mocked(canvas.getData).mockReturnValue(data);
+			vi.mocked(canvas.createFileNode).mockImplementation(() => {
+				data.nodes.push({
+					id: "new-node",
+					type: "file",
+					file: "notes/test.md",
+					x: 100,
+					y: 200,
+					width: 400,
+					height: 300,
+				});
+				return { id: "new-node", x: 100, y: 200, width: 400, height: 300 };
+			});
+			const history = new CanvasHistory();
+			const record = vi.spyOn(history, "record");
+			const operatorWithHistory = new CanvasOperator(app, DEFAULT_SETTINGS, history);
+
+			operatorWithHistory.addNodeToCanvas(canvas, new TFile("notes/test.md"), { x: 100, y: 200 });
+
+			expect(record.mock.calls[0]?.[1].nodes).toHaveLength(0);
+			expect(record.mock.calls[0]?.[2].nodes).toHaveLength(1);
 		});
 	});
 

@@ -16,13 +16,20 @@ export interface KnowledgeContext {
 }
 
 export class KnowledgeContextService {
+	private readonly canvasCache = new Map<
+		string,
+		{ mtime: number; placements: { filePath: string; nodeId: string }[] }
+	>();
+	private readonly pendingCanvasReads = new Map<
+		string,
+		{ mtime: number; promise: Promise<{ filePath: string; nodeId: string }[]> }
+	>();
+
 	constructor(private readonly app: App) {}
 
 	async getForFile(file: TFile): Promise<KnowledgeContext> {
-		const [backlinks, canvases] = await Promise.all([
-			Promise.resolve(this.getBacklinks(file)),
-			this.getCanvasLocations(file),
-		]);
+		const backlinks = this.getBacklinks(file);
+		const canvases = await this.getCanvasLocations(file);
 		return { backlinks, canvases };
 	}
 
@@ -45,25 +52,66 @@ export class KnowledgeContextService {
 		const canvasFiles = this.app.vault
 			.getFiles()
 			.filter((candidate) => candidate.extension === "canvas");
+		const livePaths = new Set(canvasFiles.map((canvasFile) => canvasFile.path));
+		for (const cachedPath of this.canvasCache.keys()) {
+			if (!livePaths.has(cachedPath)) this.canvasCache.delete(cachedPath);
+		}
 		const locations = await Promise.all(
 			canvasFiles.map(async (canvasFile): Promise<CanvasLocation[]> => {
+				const requestedMtime = canvasFile.stat.mtime;
 				try {
-					const raw = await this.app.vault.cachedRead(canvasFile);
-					const data = JSON.parse(raw) as CanvasData;
-					if (!Array.isArray(data.nodes)) return [];
-					return data.nodes
-						.filter((node) => node.type === "file" && node.file === file.path)
-						.map((node) => ({
+					let cached = this.canvasCache.get(canvasFile.path);
+					if (!cached || cached.mtime !== requestedMtime) {
+						const placements = await this.readCanvasPlacements(canvasFile, requestedMtime);
+						cached = {
+							mtime: requestedMtime,
+							placements,
+						};
+						if (canvasFile.stat.mtime === requestedMtime) {
+							this.canvasCache.set(canvasFile.path, cached);
+						}
+					}
+					return cached.placements
+						.filter((placement) => placement.filePath === file.path)
+						.map((placement) => ({
 							path: canvasFile.path,
 							label: canvasFile.basename,
-							nodeId: node.id,
+							nodeId: placement.nodeId,
 						}));
 				} catch {
+					if (this.canvasCache.get(canvasFile.path)?.mtime === requestedMtime) {
+						this.canvasCache.delete(canvasFile.path);
+					}
 					return [];
 				}
 			}),
 		);
 
 		return locations.flat().toSorted((a, b) => a.label.localeCompare(b.label));
+	}
+
+	private async readCanvasPlacements(
+		canvasFile: TFile,
+		mtime: number,
+	): Promise<{ filePath: string; nodeId: string }[]> {
+		const pending = this.pendingCanvasReads.get(canvasFile.path);
+		if (pending?.mtime === mtime) return pending.promise;
+
+		const promise = this.app.vault.cachedRead(canvasFile).then((raw) => {
+			const data = JSON.parse(raw) as CanvasData;
+			if (!Array.isArray(data.nodes)) return [];
+			return data.nodes
+				.filter((node) => node.type === "file" && node.file)
+				.map((node) => ({ filePath: node.file!, nodeId: node.id }));
+		});
+		const request = { mtime, promise };
+		this.pendingCanvasReads.set(canvasFile.path, request);
+		try {
+			return await promise;
+		} finally {
+			if (this.pendingCanvasReads.get(canvasFile.path) === request) {
+				this.pendingCanvasReads.delete(canvasFile.path);
+			}
+		}
 	}
 }

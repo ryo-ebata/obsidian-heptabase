@@ -15,6 +15,10 @@ function createCanvas(): { canvas: Canvas; data: CanvasData } {
 	return { canvas, data };
 }
 
+function createTextNode(id: string) {
+	return { id, type: "text" as const, x: 0, y: 0, width: 10, height: 10 };
+}
+
 describe("CanvasHistory", () => {
 	it("returns false when there is no history", () => {
 		const history = new CanvasHistory();
@@ -96,6 +100,59 @@ describe("CanvasHistory", () => {
 		);
 
 		expect(history.redo(canvas)).toBe(false);
+	});
+
+	it("preserves unrelated Canvas changes when applying a history delta", () => {
+		const history = new CanvasHistory();
+		const { canvas, data } = createCanvas();
+		history.record(
+			canvas,
+			{ nodes: [], edges: [] },
+			{
+				nodes: [{ id: "plugin-node", type: "text", x: 0, y: 0, width: 10, height: 10 }],
+				edges: [],
+			},
+		);
+		data.nodes = [
+			{ id: "plugin-node", type: "text", x: 0, y: 0, width: 10, height: 10 },
+			{ id: "native-node", type: "text", x: 20, y: 0, width: 10, height: 10 },
+		];
+
+		history.undo(canvas);
+
+		expect(data.nodes.map((node) => node.id)).toEqual(["native-node"]);
+	});
+
+	it("restores a deleted node at its original stacking position", () => {
+		const history = new CanvasHistory();
+		const { canvas, data } = createCanvas();
+		const before = {
+			nodes: [createTextNode("back"), createTextNode("middle"), createTextNode("front")],
+			edges: [],
+		};
+		const after = { nodes: [createTextNode("back"), createTextNode("front")], edges: [] };
+		history.record(canvas, before, after);
+		data.nodes = [...after.nodes, createTextNode("unrelated")];
+
+		history.undo(canvas);
+
+		expect(data.nodes.map(({ id }) => id)).toEqual(["back", "middle", "front", "unrelated"]);
+	});
+
+	it("restores several adjacent nodes in their original order", () => {
+		const history = new CanvasHistory();
+		const { canvas, data } = createCanvas();
+		const before = {
+			nodes: ["a", "b", "c", "d"].map(createTextNode),
+			edges: [],
+		};
+		const after = { nodes: [createTextNode("a"), createTextNode("d")], edges: [] };
+		history.record(canvas, before, after);
+		data.nodes = [...after.nodes];
+
+		history.undo(canvas);
+
+		expect(data.nodes.map(({ id }) => id)).toEqual(["a", "b", "c", "d"]);
 	});
 
 	it("bounds memory usage to the latest 100 changes", () => {

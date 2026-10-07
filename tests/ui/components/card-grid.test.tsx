@@ -81,7 +81,7 @@ describe("CardGrid", () => {
 		const { container } = render(<CardGrid results={results} />, { wrapper });
 		const cqParent = container.querySelector(".\\@container");
 		expect(cqParent).not.toBeNull();
-		const grid = cqParent!.querySelector(".grid.grid-cols-1.gap-2");
+		const grid = cqParent!.querySelector(".heptabase-library__grid.grid.grid-cols-1");
 		expect(grid).not.toBeNull();
 		expect(grid!.classList.toString()).toContain("@[440px]:grid-cols-2");
 	});

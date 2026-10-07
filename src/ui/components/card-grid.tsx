@@ -10,6 +10,7 @@ interface CardGridProps {
 	query?: string;
 	inCanvasPaths?: ReadonlySet<string>;
 	selectedPaths?: ReadonlySet<string>;
+	isHydrating?: boolean;
 	hasActiveFilters?: boolean;
 	onClearFilters?: () => void;
 }
@@ -19,6 +20,7 @@ export function CardGrid({
 	query = "",
 	inCanvasPaths = new Set(),
 	selectedPaths = new Set(),
+	isHydrating = false,
 	hasActiveFilters = false,
 	onClearFilters,
 }: CardGridProps): React.ReactElement {
@@ -39,7 +41,7 @@ export function CardGrid({
 
 	return (
 		<div className="@container">
-			<div className="grid grid-cols-1 @[440px]:grid-cols-2 gap-2">
+			<div className="heptabase-library__grid grid grid-cols-1 @[440px]:grid-cols-2">
 				{visibleItems.map((result) => (
 					<NoteCard
 						key={result.file.path}
@@ -50,6 +52,7 @@ export function CardGrid({
 						query={query}
 						isInCanvas={inCanvasPaths.has(result.file.path)}
 						isCanvasSelected={selectedPaths.has(result.file.path)}
+						isHydrating={isHydrating}
 					/>
 				))}
 				{hasMore && <div ref={sentinelRef} data-testid="sentinel" className="h-full" />}

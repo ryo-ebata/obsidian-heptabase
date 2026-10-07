@@ -55,7 +55,7 @@ for (const theme of ["dark", "light"] as const) {
 
 test("filter popover remains contained at 280px", async ({ page }) => {
 	await prepareSidebar(page, 280, "dark");
-	await page.locator(".heptabase-library-filters__menu > summary").click();
+	await page.getByRole("button", { name: "Filter and sort cards" }).click();
 	const popover = page.locator(".heptabase-library-filters__popover");
 	await expect(popover).toBeVisible();
 	const [rootBox, popoverBox] = await Promise.all([
@@ -67,4 +67,43 @@ test("filter popover remains contained at 280px", async ({ page }) => {
 	expect(popoverBox!.x).toBeGreaterThanOrEqual(rootBox!.x);
 	expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(rootBox!.x + rootBox!.width);
 	await expect(page.locator("#root")).toHaveScreenshot("card-library-filter-popover-dark-280.png");
+});
+
+test("filter popover closes with Escape and restores trigger focus", async ({ page }) => {
+	await prepareSidebar(page, 280, "light");
+	const trigger = page.getByRole("button", { name: "Filter and sort cards" });
+	await trigger.click();
+	await page.getByLabel("Filter by tag").focus();
+	await page.keyboard.press("Escape");
+
+	await expect(trigger).toHaveAttribute("aria-expanded", "false");
+	await expect(trigger).toBeFocused();
+});
+
+test("tab transition keeps inactive panels inaccessible", async ({ page }) => {
+	await prepareSidebar(page, 380, "dark");
+	await page.getByRole("tab", { name: "Article" }).click();
+
+	await expect(page.getByRole("tab", { name: "Article" })).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("[data-tab-panel='card-library']")).toHaveAttribute(
+		"aria-hidden",
+		"true",
+	);
+	await expect(page.locator("[data-tab-panel='article-viewer']")).toHaveClass(/is-active/);
+});
+
+test("reduced motion disables decorative animation", async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await prepareSidebar(page, 280, "dark");
+	await page.getByRole("button", { name: "Filter and sort cards" }).click();
+
+	const durationMs = await page
+		.locator(".heptabase-library-filters__popover")
+		.evaluate((element) => {
+			const duration = getComputedStyle(element).animationDuration;
+			return duration.endsWith("ms")
+				? Number.parseFloat(duration)
+				: Number.parseFloat(duration) * 1000;
+		});
+	expect(durationMs).toBeLessThanOrEqual(0.01);
 });

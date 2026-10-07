@@ -2,14 +2,13 @@ import { CardGrid } from "@/ui/components/card-grid";
 import { filterAndSortLibraryResults, type LibrarySort } from "@/services/library-results";
 import { LibraryFilters } from "@/ui/components/library-filters";
 import { SearchBar } from "@/ui/components/search-bar";
-import { useCanvasLibraryContext } from "@/ui/hooks/use-canvas-library-context";
-import { useCanvasView } from "@/ui/hooks/use-canvas-view";
+import { useActiveCanvasState } from "@/ui/hooks/use-canvas-state";
 import { useNoteSearch } from "@/ui/hooks/use-note-search";
 import type React from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 export function HeadingExplorer(): React.ReactElement {
-	const { query, results, isSearching, setQuery } = useNoteSearch();
+	const { query, results, isSearching, isHydrating, setQuery } = useNoteSearch();
 	const [tag, setTag] = useState("");
 	const [folder, setFolder] = useState("");
 	const [sort, setSort] = useState<LibrarySort>("updated");
@@ -18,8 +17,8 @@ export function HeadingExplorer(): React.ReactElement {
 	const deferredTag = useDeferredValue(tag);
 	const deferredFolder = useDeferredValue(folder);
 	const resultsRef = useRef<HTMLDivElement>(null);
-	const canvasView = useCanvasView();
-	const canvasContext = useCanvasLibraryContext(canvasView);
+	const canvasContext = useActiveCanvasState();
+	const canvasView = canvasContext.canvasView;
 	const selectedPathSignature = [...canvasContext.selectedPaths].toSorted().join("\u0000");
 
 	const filteredResults = useMemo(() => {
@@ -84,6 +83,7 @@ export function HeadingExplorer(): React.ReactElement {
 					query={query}
 					inCanvasPaths={canvasContext.inCanvasPaths}
 					selectedPaths={canvasContext.selectedPaths}
+					isHydrating={isHydrating}
 					hasActiveFilters={query.trim() !== "" || tag !== "" || folder !== "" || canvasOnly}
 					onClearFilters={() => {
 						setQuery("");

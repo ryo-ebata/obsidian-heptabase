@@ -48,6 +48,23 @@ describe("CanvasObserver", () => {
 			const result = observer.getActiveCanvasView();
 			expect(result).toBe(canvasView);
 		});
+
+		it("returns the most recently active Canvas when several are open", () => {
+			const first = { view: createMockCanvasView() };
+			const second = { view: createMockCanvasView() };
+			app.workspace.getLeavesOfType = vi.fn().mockReturnValue([first, second]);
+			app.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(second);
+
+			expect(observer.getActiveCanvasView()).toBe(second.view);
+		});
+
+		it("does not guess a target when several Canvases are open without recent activity", () => {
+			app.workspace.getLeavesOfType = vi
+				.fn()
+				.mockReturnValue([{ view: createMockCanvasView() }, { view: createMockCanvasView() }]);
+
+			expect(observer.getActiveCanvasView()).toBeNull();
+		});
 	});
 
 	describe("getSelectedNodes", () => {

@@ -28,14 +28,23 @@ describe("SidebarContainer", () => {
 		);
 	});
 
+	it("shares one Canvas polling loop across all mounted tabs", () => {
+		const setIntervalSpy = vi.spyOn(window, "setInterval");
+		render(<SidebarContainer />, { wrapper: createWrapper(app) });
+
+		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+		setIntervalSpy.mockRestore();
+	});
+
 	it("switches tabs with horizontal keyboard navigation", () => {
 		const { container } = render(<SidebarContainer />, { wrapper: createWrapper(app) });
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Card Library" }), { key: "ArrowRight" });
 
 		const cardLibrary = container.querySelector("[data-tab-panel='card-library']") as HTMLElement;
 		const article = container.querySelector("[data-tab-panel='article-viewer']") as HTMLElement;
-		expect(cardLibrary.style.display).toBe("none");
-		expect(article.style.display).not.toBe("none");
+		expect(cardLibrary.classList.contains("is-active")).toBe(false);
+		expect(article.classList.contains("is-active")).toBe(true);
+		expect(cardLibrary.getAttribute("aria-hidden")).toBe("true");
 	});
 
 	it("shows Card Library panel by default and hides Article panel", () => {
@@ -45,8 +54,8 @@ describe("SidebarContainer", () => {
 
 		const cardLibrary = container.querySelector("[data-tab-panel='card-library']") as HTMLElement;
 		const article = container.querySelector("[data-tab-panel='article-viewer']") as HTMLElement;
-		expect(cardLibrary.style.display).not.toBe("none");
-		expect(article.style.display).toBe("none");
+		expect(cardLibrary.classList.contains("is-active")).toBe(true);
+		expect(article.classList.contains("is-active")).toBe(false);
 	});
 
 	it("switches to Canvas search panel", () => {
@@ -55,7 +64,7 @@ describe("SidebarContainer", () => {
 		fireEvent.click(screen.getByText("Canvas"));
 
 		const canvas = container.querySelector("[data-tab-panel='canvas-search']") as HTMLElement;
-		expect(canvas.style.display).not.toBe("none");
+		expect(canvas.classList.contains("is-active")).toBe(true);
 		expect(screen.getByText("Open a Canvas to search its contents.")).toBeDefined();
 	});
 
@@ -66,8 +75,8 @@ describe("SidebarContainer", () => {
 
 		const cardLibrary = container.querySelector("[data-tab-panel='card-library']") as HTMLElement;
 		const article = container.querySelector("[data-tab-panel='article-viewer']") as HTMLElement;
-		expect(cardLibrary.style.display).toBe("none");
-		expect(article.style.display).not.toBe("none");
+		expect(cardLibrary.classList.contains("is-active")).toBe(false);
+		expect(article.classList.contains("is-active")).toBe(true);
 	});
 
 	it("switches back to Card Library when Card Library tab is clicked", () => {
@@ -78,8 +87,8 @@ describe("SidebarContainer", () => {
 
 		const cardLibrary = container.querySelector("[data-tab-panel='card-library']") as HTMLElement;
 		const article = container.querySelector("[data-tab-panel='article-viewer']") as HTMLElement;
-		expect(cardLibrary.style.display).not.toBe("none");
-		expect(article.style.display).toBe("none");
+		expect(cardLibrary.classList.contains("is-active")).toBe(true);
+		expect(article.classList.contains("is-active")).toBe(false);
 	});
 
 	it("keeps both panels mounted across tab switches", () => {
@@ -136,6 +145,6 @@ describe("SidebarContainer", () => {
 		});
 
 		const article = container.querySelector("[data-tab-panel='article-viewer']") as HTMLElement;
-		expect(article.style.display).not.toBe("none");
+		expect(article.classList.contains("is-active")).toBe(true);
 	});
 });

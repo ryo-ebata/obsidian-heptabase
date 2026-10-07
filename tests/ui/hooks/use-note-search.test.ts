@@ -20,6 +20,7 @@ describe("useNoteSearch", () => {
 		(app.vault.cachedRead as Mock).mockResolvedValue("Some content");
 
 		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
+		expect(result.current.isHydrating).toBe(true);
 
 		await act(async () => {});
 
@@ -27,6 +28,7 @@ describe("useNoteSearch", () => {
 		expect(result.current.results).toHaveLength(1);
 		expect(result.current.results[0].file).toBe(file);
 		expect(result.current.results[0].excerpt).toBe("Some content");
+		expect(result.current.isHydrating).toBe(false);
 	});
 
 	it("updates the search query with setQuery", async () => {
@@ -122,5 +124,30 @@ describe("useNoteSearch", () => {
 
 		expect(result.current.results).toHaveLength(1);
 		expect(result.current.results[0].file).toBe(file);
+	});
+
+	it("refreshes the current results after a Markdown file changes", async () => {
+		const app = new App();
+		const file = new TFile("notes/live.md");
+		let content = "Old excerpt";
+		let modifyHandler: ((file: TFile) => void) | undefined;
+		(app.vault.getMarkdownFiles as Mock).mockReturnValue([file]);
+		(app.vault.cachedRead as Mock).mockImplementation(() => Promise.resolve(content));
+		(app.vault.on as Mock).mockImplementation((event: string, handler: (file: TFile) => void) => {
+			if (event === "modify") modifyHandler = handler;
+			return { id: event };
+		});
+		const { result } = renderHook(() => useNoteSearch(), { wrapper: createWrapper(app) });
+		await act(async () => {});
+		expect(result.current.results[0]?.excerpt).toBe("Old excerpt");
+
+		content = "New excerpt";
+		act(() => {
+			modifyHandler?.(file);
+			vi.advanceTimersByTime(80);
+		});
+		await act(async () => {});
+
+		expect(result.current.results[0]?.excerpt).toBe("New excerpt");
 	});
 });

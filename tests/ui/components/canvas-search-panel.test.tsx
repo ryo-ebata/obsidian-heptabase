@@ -1,11 +1,23 @@
 import { CanvasSearchPanel } from "@/ui/components/canvas-search-panel";
 import type { CanvasNode } from "@/types/obsidian-canvas";
+import { CanvasStateProvider } from "@/ui/hooks/use-canvas-state";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { App } from "obsidian";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createMockCanvasView } from "../../helpers/create-mock-canvas-view";
 import { createWrapper } from "../../helpers/create-wrapper";
+
+function renderPanel(app: App): ReturnType<typeof render> {
+	const Wrapper = createWrapper(app);
+	return render(
+		<Wrapper>
+			<CanvasStateProvider>
+				<CanvasSearchPanel />
+			</CanvasStateProvider>
+		</Wrapper>,
+	);
+}
 
 describe("CanvasSearchPanel", () => {
 	it("arranges the current Canvas selection from the layout toolbar", () => {
@@ -24,7 +36,7 @@ describe("CanvasSearchPanel", () => {
 		});
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
-		render(<CanvasSearchPanel />, { wrapper: createWrapper(app) });
+		renderPanel(app);
 		fireEvent.click(screen.getByRole("button", { name: "Align left" }));
 
 		const arranged = vi.mocked(canvasView.canvas.setData).mock.calls[0][0];
@@ -76,7 +88,7 @@ describe("CanvasSearchPanel", () => {
 		canvasView.canvas.zoomToSelection = vi.fn();
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
-		render(<CanvasSearchPanel />, { wrapper: createWrapper(app) });
+		renderPanel(app);
 
 		fireEvent.change(screen.getByPlaceholderText("Search this Canvas..."), {
 			target: { value: "research" },
@@ -92,7 +104,7 @@ describe("CanvasSearchPanel", () => {
 		const canvasView = createMockCanvasView();
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
-		render(<CanvasSearchPanel />, { wrapper: createWrapper(app) });
+		renderPanel(app);
 		const searchInput = screen.getByPlaceholderText("Search this Canvas...");
 		fireEvent.change(searchInput, { target: { value: "research" } });
 		fireEvent.click(screen.getByRole("button", { name: "Clear Canvas search" }));
@@ -105,7 +117,7 @@ describe("CanvasSearchPanel", () => {
 		const canvasView = createMockCanvasView();
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([{ view: canvasView }]);
 
-		render(<CanvasSearchPanel />, { wrapper: createWrapper(app) });
+		renderPanel(app);
 
 		expect(screen.queryByRole("button", { name: "Align left" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Connect selected nodes" })).toBeNull();
@@ -116,7 +128,7 @@ describe("CanvasSearchPanel", () => {
 		const app = new App();
 		app.workspace.getLeavesOfType = vi.fn().mockReturnValue([]);
 
-		render(<CanvasSearchPanel />, { wrapper: createWrapper(app) });
+		renderPanel(app);
 
 		expect(screen.getByText("Open a Canvas to search its contents.")).toBeDefined();
 	});

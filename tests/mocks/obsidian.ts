@@ -90,6 +90,7 @@ export class FileManager {
 export class Workspace {
 	getActiveViewOfType = vi.fn().mockReturnValue(null);
 	getLeavesOfType = vi.fn().mockReturnValue([]);
+	getMostRecentLeaf = vi.fn().mockReturnValue(null);
 	on = vi.fn().mockReturnValue({ id: "workspace-event-ref" });
 	offref = vi.fn();
 	detachLeavesOfType = vi.fn();

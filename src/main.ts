@@ -19,7 +19,13 @@ export default class HeptabasePlugin extends Plugin {
 		this.initializeServices();
 
 		this.registerView(VIEW_TYPE_HEADING_EXPLORER, (leaf: WorkspaceLeaf) => {
-			return new HeadingExplorerView(leaf, this.app, this.settings, this.services.canvasOperator);
+			return new HeadingExplorerView(
+				leaf,
+				this.app,
+				this.settings,
+				this.services.canvasOperator,
+				this.services.canvasObserver,
+			);
 		});
 
 		this.addRibbonIcon("list-tree", "Heading Explorer", () => {
